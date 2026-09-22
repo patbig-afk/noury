@@ -2,7 +2,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { PAYER_LABELS, balanceLabel, decimalToCents, formatCents } from "@/lib/split";
+import { computeCommitments, type PersonStatus } from "@/lib/commitments";
+import { PAYER_LABELS, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
 import { DeleteButton } from "./delete-button";
 
@@ -24,7 +25,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
 
   const [expenses, totals] = await Promise.all([
     prisma.expense.findMany({ include: { category: true }, orderBy: ORDER_BY[sort](order) }),
-    prisma.expense.aggregate({ _sum: { amount: true, sharePatrick: true, shareCharlotte: true, owedByCharlotte: true } }),
+    prisma.expense.aggregate({ _sum: { amount: true, sharePatrick: true, shareCharlotte: true, owedByCharlotte: true, paidPatrick: true, paidCharlotte: true } }),
   ]);
 
   const sum = {
@@ -33,6 +34,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
     shareCharlotte: decimalToCents(totals._sum.shareCharlotte),
     owedByCharlotte: decimalToCents(totals._sum.owedByCharlotte),
   };
+  const status = computeCommitments(decimalToCents(totals._sum.paidPatrick), decimalToCents(totals._sum.paidCharlotte));
 
   // Lien d'en-tête de colonne : re-cliquer sur la colonne active inverse l'ordre.
   const sortHref = (key: SortKey) => {
@@ -53,13 +55,23 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
         </Link>
       </div>
 
-      {/* Résumé visible d'un coup d'œil sur téléphone */}
-      <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Total dépensé" cents={sum.amount} />
-        <Stat label="Part Patrick (70 %)" cents={sum.sharePatrick} />
-        <Stat label="Part Charlotte (30 %)" cents={sum.shareCharlotte} />
-        <Stat label={balanceLabel(sum.owedByCharlotte)} cents={Math.abs(sum.owedByCharlotte)} highlight />
-      </dl>
+      {/* Suivi des engagements 70/30 : visible d'un coup d'œil sur téléphone */}
+      <section className="mb-6 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-stone-200 bg-white p-3">
+          <h2 className="text-xs text-stone-500">Budget prévu (notaire)</h2>
+          <p className="text-lg font-semibold tabular-nums">{formatCents(status.budget)}</p>
+          <dl className="mt-2 space-y-0.5 text-sm">
+            <Line label="Dépensé" cents={status.spent} />
+            {status.overrun > 0 ? (
+              <Line label="Dépassement (partagé 70/30)" cents={status.overrun} className="font-medium text-red-700" />
+            ) : (
+              <Line label="Reste au budget" cents={status.budget - status.spent} />
+            )}
+          </dl>
+        </div>
+        <Person name="Patrick" share="70 %" s={status.patrick} />
+        <Person name="Charlotte" share="30 %" s={status.charlotte} />
+      </section>
 
       {expenses.length === 0 ? (
         <p className="rounded-lg bg-white p-6 text-center text-stone-500">
@@ -142,11 +154,35 @@ function Money({ cents, bold, signed }: { cents: number; bold?: boolean; signed?
   );
 }
 
-function Stat({ label, cents, highlight }: { label: string; cents: number; highlight?: boolean }) {
+function Line({ label, cents, className = "" }: { label: string; cents: number; className?: string }) {
   return (
-    <div className={`rounded-lg border p-3 ${highlight ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white"}`}>
-      <dt className={`text-xs ${highlight ? "text-stone-300" : "text-stone-500"}`}>{label}</dt>
-      <dd className="text-lg font-semibold tabular-nums">{formatCents(cents)}</dd>
+    <div className={`flex justify-between gap-2 ${className}`}>
+      <dt>{label}</dt>
+      <dd className="tabular-nums">{formatCents(cents)}</dd>
+    </div>
+  );
+}
+
+// Situation d'un indivisaire face à son engagement : reste à verser, ou avance à récupérer.
+function Person({ name, share, s }: { name: string; share: string; s: PersonStatus }) {
+  const ahead = s.balance > 0;
+  return (
+    <div className={`rounded-lg border p-3 ${ahead ? "border-green-700 bg-green-50" : "border-stone-200 bg-white"}`}>
+      <h2 className="text-xs text-stone-500">
+        {name} · engagement {share}
+      </h2>
+      <p className="text-lg font-semibold tabular-nums">{formatCents(s.commitment)}</p>
+      <dl className="mt-2 space-y-0.5 text-sm">
+        <Line label="Payé" cents={s.paid} />
+        {s.due !== s.commitment && <Line label="Part due (avec dépassement)" cents={s.due} />}
+        {ahead ? (
+          <Line label="Avance à récupérer" cents={s.balance} className="font-semibold text-green-800" />
+        ) : s.balance < 0 ? (
+          <Line label="Reste à verser" cents={-s.balance} className="font-medium" />
+        ) : (
+          <Line label="Engagement tenu" cents={0} className="font-medium" />
+        )}
+      </dl>
     </div>
   );
 }
