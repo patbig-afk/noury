@@ -1,6 +1,6 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
+import { uploadPresigned } from "@vercel/blob/client";
 import { useActionState, useState, useTransition, type FormEvent } from "react";
 import { BLOB_FOLDER, FILE_ACCEPT } from "@/lib/files";
 import { PAYER_LABELS, balanceLabel, computeSplit, formatCents, parseAmountToCents, type Payer } from "@/lib/split";
@@ -16,7 +16,7 @@ async function uploadFile(formData: FormData, field: "invoice" | "proof") {
   if (!(file instanceof File) || file.size === 0) return;
 
   const safeName = file.name.normalize("NFD").replace(/[^\w.-]+/g, "_");
-  const blob = await upload(`${BLOB_FOLDER}/${safeName}`, file, {
+  const blob = await uploadPresigned(`${BLOB_FOLDER}/${safeName}`, file, {
     access: "private",
     handleUploadUrl: "/api/upload",
     multipart: file.size > 5 * 1024 * 1024,
@@ -184,8 +184,8 @@ function Fields({
 
       {!filesEnabled && (
         <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-          📎 Envoi de fichiers indisponible : aucun store Vercel Blob n&apos;est connecté (variable
-          BLOB_READ_WRITE_TOKEN absente ou invalide). La dépense peut quand même être enregistrée sans fichier.
+          📎 Envoi de fichiers indisponible : aucun store Vercel Blob n&apos;est connecté (variables
+          BLOB_STORE_ID et BLOB_WEBHOOK_PUBLIC_KEY absentes). La dépense peut quand même être enregistrée sans fichier.
         </p>
       )}
 

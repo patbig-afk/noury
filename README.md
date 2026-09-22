@@ -23,7 +23,8 @@ Remplace le Google Sheet `Suivi_Depenses_Maison_Noury`.
 
 1. Importer le repo dans Vercel.
 2. **Storage → Neon (Postgres)** : connecter au projet (crée `DATABASE_URL` + `DATABASE_URL_UNPOOLED`).
-3. **Storage → Blob** : créer un store avec l'accès **Private**, le connecter (crée `BLOB_READ_WRITE_TOKEN`).
+3. **Storage → Blob** : créer un store avec l'accès **Private**, le connecter (crée `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY`, auth OIDC).
+   ⚠️ L'OIDC ne marche que dans les environnements où le store est connecté : en local (`development`), l'envoi de fichiers est refusé tant que le store n'y est pas connecté aussi.
 4. Déployer. Le build applique les migrations tout seul (`prisma migrate deploy`).
 
 > ⚠️ La base doit être connectée **à tous les environnements** (Production + Preview) : les branches
