@@ -1,5 +1,6 @@
 "use server";
 
+import { del } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { expenseData } from "@/lib/expenses";
@@ -85,4 +86,18 @@ export async function createExpense(prev: ExpenseFormState, formData: FormData):
 
   revalidatePath("/", "layout");
   return { savedCount: prev.savedCount + 1, lastSaved: `${d.description} — ${d.supplier}` };
+}
+
+// Supprime une dépense puis ses fichiers du store Blob (les liens Drive importés sont ignorés).
+export async function deleteExpense(id: string): Promise<{ error?: string }> {
+  const expense = await prisma.expense.delete({ where: { id } }).catch(() => null);
+  if (!expense) return { error: "Dépense introuvable (déjà supprimée ?)" };
+
+  const paths = [expense.invoicePath, expense.proofPath, expense.proof2Path].filter(
+    (p): p is string => !!p?.startsWith(`${BLOB_FOLDER}/`),
+  );
+  if (paths.length) await del(paths).catch((error) => console.error("Fichiers Blob non supprimés", paths, error));
+
+  revalidatePath("/", "layout");
+  return {};
 }

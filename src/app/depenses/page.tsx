@@ -4,6 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { PAYER_LABELS, balanceLabel, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
+import { DeleteButton } from "./delete-button";
 
 type SortKey = "date" | "categorie";
 type Order = "asc" | "desc";
@@ -85,6 +86,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                   Charlotte doit
                 </th>
                 <th className="px-2.5 py-2">Fichiers</th>
+                <th className="px-2.5 py-2"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
@@ -106,6 +108,9 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                       <FileLink id={e.id} kind="justificatif-2" name={e.proof2Name} label="🧾" title="Justificatif 2" />
                     )}
                   </td>
+                  <td className="px-1 py-2 text-right">
+                    <DeleteButton id={e.id} label={`${e.description} — ${e.supplier}`} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -117,7 +122,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <Money cents={sum.sharePatrick} />
                 <Money cents={sum.shareCharlotte} />
                 <Money cents={sum.owedByCharlotte} signed />
-                <td />
+                <td colSpan={2} />
               </tr>
             </tfoot>
           </table>
