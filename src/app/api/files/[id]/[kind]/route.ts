@@ -1,6 +1,5 @@
 import { get } from "@vercel/blob";
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const FIELDS = {
@@ -9,10 +8,9 @@ const FIELDS = {
   "justificatif-2": { path: "proof2Path", name: "proof2Name" },
 } as const;
 
-// Sert une facture ou un justificatif depuis le store Blob privé, après vérification de la session.
+// Sert une facture ou un justificatif depuis le store Blob privé.
 // Les fichiers importés du Google Sheet sont des liens Drive : on redirige simplement vers eux.
 export async function GET(_request: Request, ctx: RouteContext<"/api/files/[id]/[kind]">) {
-  if (!(await isAuthenticated())) return new Response("Non autorisé", { status: 401 });
   const { id, kind } = await ctx.params;
   if (!(kind in FIELDS)) return new Response("Introuvable", { status: 404 });
   const field = FIELDS[kind as keyof typeof FIELDS];

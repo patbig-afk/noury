@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { logout } from "./login/actions";
 
 const TABS = [
   { href: "/", label: "➕ Saisir" },
@@ -21,9 +20,6 @@ export function Nav({ current }: { current?: (typeof TABS)[number]["href"] }) {
           </Link>
         ))}
       </nav>
-      <form action={logout}>
-        <button className="text-sm text-stone-500 underline">Déconnexion</button>
-      </form>
     </header>
   );
 }

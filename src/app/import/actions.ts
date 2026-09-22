@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth";
 import { expenseData } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
 import { expenseKey, parseSheetCsv } from "@/lib/sheet-import";
@@ -16,8 +15,6 @@ export type ImportReport = {
 const MAX_CSV_SIZE = 1024 * 1024;
 
 export async function importSheet(_prev: ImportReport, formData: FormData): Promise<ImportReport> {
-  await requireAuth();
-
   const file = formData.get("csv");
   if (!(file instanceof File) || file.size === 0) {
     return { imported: 0, duplicates: 0, errors: [{ line: 0, message: "Choisis le fichier CSV exporté du Sheet." }] };

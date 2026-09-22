@@ -1,6 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/auth";
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from "@/lib/files";
 
 // Délivre au navigateur un jeton d'upload temporaire : le fichier part directement
@@ -12,14 +11,11 @@ export async function POST(request: Request) {
     const result = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => {
-        if (!(await isAuthenticated())) throw new Error("Non autorisé");
-        return {
-          allowedContentTypes: ALLOWED_FILE_TYPES,
-          maximumSizeInBytes: MAX_FILE_SIZE,
-          addRandomSuffix: true,
-        };
-      },
+      onBeforeGenerateToken: async () => ({
+        allowedContentTypes: ALLOWED_FILE_TYPES,
+        maximumSizeInBytes: MAX_FILE_SIZE,
+        addRandomSuffix: true,
+      }),
       // Rien à faire ici : le chemin du fichier est enregistré avec la dépense.
       onUploadCompleted: async () => {},
     });

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth";
 import { expenseData } from "@/lib/expenses";
 import { BLOB_FOLDER } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
@@ -50,8 +49,6 @@ const schema = z
   });
 
 export async function createExpense(prev: ExpenseFormState, formData: FormData): Promise<ExpenseFormState> {
-  await requireAuth();
-
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};

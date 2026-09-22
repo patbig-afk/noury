@@ -18,15 +18,13 @@ Remplace le Google Sheet `Suivi_Depenses_Maison_Noury`.
 | `src/app/depenses/` | Formulaire + enregistrement (Server Action) |
 | `src/app/api/upload` | Délivre un jeton d'upload : les fichiers vont direct du téléphone au Blob |
 | `src/app/api/files/[id]/[kind]` | Téléchargement protégé d'une facture / d'un justificatif |
-| `src/proxy.ts` + `src/lib/auth.ts` | Mot de passe unique → cookie signé 90 jours |
 
 ## Déployer sur Vercel
 
 1. Importer le repo dans Vercel.
 2. **Storage → Neon (Postgres)** : connecter au projet (crée `DATABASE_URL` + `DATABASE_URL_UNPOOLED`).
 3. **Storage → Blob** : créer un store avec l'accès **Private**, le connecter (crée `BLOB_READ_WRITE_TOKEN`).
-4. **Settings → Environment Variables** : ajouter `APP_PASSWORD` et `AUTH_SECRET` (`openssl rand -hex 32`).
-5. Déployer. Le build applique les migrations tout seul (`prisma migrate deploy`).
+4. Déployer. Le build applique les migrations tout seul (`prisma migrate deploy`).
 
 > ⚠️ La base doit être connectée **à tous les environnements** (Production + Preview) : les branches
 > autres que `main` sont déployées en Preview. Sans base, le build s'arrête avec un message qui dit quoi faire.
