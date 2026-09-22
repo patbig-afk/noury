@@ -11,8 +11,9 @@ Remplace le Google Sheet `Suivi_Depenses_Maison_Noury`.
 | --- | --- |
 | `prisma/schema.prisma` | Structure de la base (dépenses, catégories) |
 | `prisma/migrations/` | Historique de la base (inclut les 3 catégories par défaut) |
-| `src/lib/split.ts` | Règles de répartition 70/30 et calcul de « Charlotte doit à Patrick » (testées dans `split.test.ts`) |
+| `src/lib/split.ts` | Règles de répartition 70/30 (dépenses « achat / travaux » ; les dépenses courantes restent à la charge du payeur) et calcul de « Charlotte doit à Patrick » (testées dans `split.test.ts`) |
 | `src/lib/commitments.ts` | Engagements de la déclaration d'origine des deniers (budget 682 730 €, 70/30) : reste à verser / avance à récupérer, dépassement partagé 70/30 |
+| `src/lib/sale.ts` + `src/app/vente/` | Simulation de vente : chacun récupère sa mise, plus-value partagée 70/30, prêt de Charlotte déduit de sa part |
 | `src/lib/sheet-import.ts` + `src/app/import/` | Import de l'historique depuis l'export CSV du Google Sheet (sans doublons) |
 | `src/app/page.tsx` | Page « Nouvelle dépense » |
 | `src/app/depenses/page.tsx` | Liste des dépenses : tri date/catégorie, totaux, téléchargements |

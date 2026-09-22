@@ -23,9 +23,10 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
   const sort: SortKey = params.tri === "categorie" ? "categorie" : "date";
   const order: Order = params.ordre === "asc" ? "asc" : params.ordre === "desc" ? "desc" : sort === "date" ? "desc" : "asc";
 
-  const [expenses, totals] = await Promise.all([
+  const [expenses, totals, current] = await Promise.all([
     prisma.expense.findMany({ include: { category: true }, orderBy: ORDER_BY[sort](order) }),
-    prisma.expense.aggregate({ _sum: { amount: true, sharePatrick: true, shareCharlotte: true, owedByCharlotte: true, paidPatrick: true, paidCharlotte: true } }),
+    prisma.expense.aggregate({ where: { kind: "SHARED" }, _sum: { amount: true, sharePatrick: true, shareCharlotte: true, owedByCharlotte: true, paidPatrick: true, paidCharlotte: true } }),
+    prisma.expense.aggregate({ where: { kind: "CURRENT" }, _sum: { amount: true } }),
   ]);
 
   const sum = {
@@ -105,14 +106,27 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
               {expenses.map((e) => (
                 <tr key={e.id} className="hover:bg-stone-50">
                   <td className="px-2.5 py-2 tabular-nums">{dateFormat.format(e.date)}</td>
-                  <td className="px-2.5 py-2">{e.category.name}</td>
+                  <td className="px-2.5 py-2">
+                    {e.category.name}
+                    {e.kind === "CURRENT" && (
+                      <span className="ml-1.5 rounded bg-stone-200 px-1.5 py-0.5 text-xs text-stone-600" title="Dépense courante : non partagée">
+                        courante
+                      </span>
+                    )}
+                  </td>
                   <td className="max-w-56 truncate px-2.5 py-2" title={e.description}>{e.description}</td>
                   <td className="px-2.5 py-2">{e.supplier}</td>
                   <Money cents={decimalToCents(e.amount)} bold />
                   <td className="px-2.5 py-2">{PAYER_LABELS[e.paidBy]}</td>
-                  <Money cents={decimalToCents(e.sharePatrick)} />
-                  <Money cents={decimalToCents(e.shareCharlotte)} />
-                  <Money cents={decimalToCents(e.owedByCharlotte)} signed />
+                  {e.kind === "SHARED" ? (
+                    <>
+                      <Money cents={decimalToCents(e.sharePatrick)} />
+                      <Money cents={decimalToCents(e.shareCharlotte)} />
+                      <Money cents={decimalToCents(e.owedByCharlotte)} signed />
+                    </>
+                  ) : (
+                    <td colSpan={3} className="px-2.5 py-2 text-center text-xs text-stone-500">non partagée</td>
+                  )}
                   <td className="space-x-2 px-2.5 py-2 text-base">
                     <FileLink id={e.id} kind="facture" name={e.invoiceName} label="📄" title="Facture" />
                     <FileLink id={e.id} kind="justificatif" name={e.proofName} label="🧾" title="Justificatif de paiement" />
@@ -128,7 +142,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
             </tbody>
             <tfoot className="border-t-2 border-stone-300 bg-stone-100 font-semibold">
               <tr>
-                <td className="px-2.5 py-2" colSpan={4}>Total</td>
+                <td className="px-2.5 py-2" colSpan={4}>Total partagé (achat / travaux)</td>
                 <Money cents={sum.amount} />
                 <td />
                 <Money cents={sum.sharePatrick} />
@@ -136,6 +150,13 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <Money cents={sum.owedByCharlotte} signed />
                 <td colSpan={2} />
               </tr>
+              {decimalToCents(current._sum.amount) > 0 && (
+                <tr className="font-normal text-stone-600">
+                  <td className="px-2.5 py-2" colSpan={4}>Dépenses courantes (non partagées)</td>
+                  <Money cents={decimalToCents(current._sum.amount)} />
+                  <td colSpan={6} />
+                </tr>
+              )}
             </tfoot>
           </table>
         </div>

@@ -16,6 +16,13 @@ enum Payer {
   BOTH
 }
 
+// SHARED : achat, travaux, amélioration → partagé 70/30 (engagements, vente).
+// CURRENT : dépense courante → à la charge de qui l'a payée (séparation de biens, pas de partage des frais courants).
+enum ExpenseKind {
+  SHARED
+  CURRENT
+}
+
 model Category {
   id        String    @id @default(cuid())
   name      String    @unique
@@ -24,14 +31,15 @@ model Category {
 }
 
 model Expense {
-  id          String   @id @default(cuid())
-  date        DateTime @db.Date
+  id          String      @id @default(cuid())
+  date        DateTime    @db.Date
   categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   description String
   supplier    String
-  amount      Decimal  @db.Decimal(12, 2)
+  amount      Decimal     @db.Decimal(12, 2)
   paidBy      Payer
+  kind        ExpenseKind @default(SHARED)
 
   // Valeurs calculées à l'enregistrement (cf. src/lib/split.ts)
   sharePatrick    Decimal @db.Decimal(12, 2)

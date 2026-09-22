@@ -55,3 +55,16 @@ describe("balanceLabel", () => {
     expect(balanceLabel(0)).toBe("Comptes à l'équilibre");
   });
 });
+
+describe("dépense courante", () => {
+  it("reste à la charge de qui l'a payée", () => {
+    expect(computeSplit(100_00, "PATRICK", "CURRENT")).toEqual({
+      sharePatrick: 100_00,
+      shareCharlotte: 0,
+      paidPatrick: 100_00,
+      paidCharlotte: 0,
+      owedByCharlotte: 0,
+    });
+    expect(computeSplit(100_00, "BOTH", "CURRENT")).toMatchObject({ sharePatrick: 50_00, shareCharlotte: 50_00, owedByCharlotte: 0 });
+  });
+});

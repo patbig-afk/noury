@@ -3,6 +3,7 @@ import Link from "next/link";
 const TABS = [
   { href: "/", label: "➕ Saisir" },
   { href: "/depenses", label: "📋 Dépenses" },
+  { href: "/vente", label: "🏷️ Vente" },
 ] as const;
 
 export function Nav({ current }: { current?: (typeof TABS)[number]["href"] }) {

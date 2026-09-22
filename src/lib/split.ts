@@ -4,6 +4,12 @@
 export const SHARE_PATRICK = 0.7;
 
 export type Payer = "PATRICK" | "CHARLOTTE" | "BOTH";
+export type ExpenseKind = "SHARED" | "CURRENT";
+
+export const KIND_LABELS: Record<ExpenseKind, string> = {
+  SHARED: "Achat / travaux (partagé 70/30)",
+  CURRENT: "Dépense courante (non partagée)",
+};
 
 export const PAYER_LABELS: Record<Payer, string> = {
   PATRICK: "Patrick",
@@ -27,15 +33,20 @@ export function parseAmountToCents(raw: string): number | null {
   return Number(euros) * 100 + Number(decimals.padEnd(2, "0"));
 }
 
-export function computeSplit(amountCents: number, paidBy: Payer): Split {
-  // Part Patrick arrondie au centime, Charlotte prend le reste : la somme retombe toujours pile sur le montant.
-  const sharePatrick = Math.round(amountCents * SHARE_PATRICK);
-  const shareCharlotte = amountCents - sharePatrick;
-
+export function computeSplit(amountCents: number, paidBy: Payer, kind: ExpenseKind = "SHARED"): Split {
   let paidPatrick = 0;
   if (paidBy === "PATRICK") paidPatrick = amountCents;
   if (paidBy === "BOTH") paidPatrick = Math.round(amountCents / 2);
   const paidCharlotte = paidBy === "PATRICK" ? 0 : amountCents - paidPatrick;
+
+  // Dépense courante : chacun garde à sa charge ce qu'il a payé, rien n'est dû à l'autre.
+  if (kind === "CURRENT") {
+    return { sharePatrick: paidPatrick, shareCharlotte: paidCharlotte, paidPatrick, paidCharlotte, owedByCharlotte: 0 };
+  }
+
+  // Part Patrick arrondie au centime, Charlotte prend le reste : la somme retombe toujours pile sur le montant.
+  const sharePatrick = Math.round(amountCents * SHARE_PATRICK);
+  const shareCharlotte = amountCents - sharePatrick;
 
   // Ce que Charlotte doit à Patrick sur cette dépense = ce que Patrick a avancé au-delà de sa part.
   // (Équivaut à Part Charlotte − Charlotte a payé.) Négatif : c'est Patrick qui doit à Charlotte.

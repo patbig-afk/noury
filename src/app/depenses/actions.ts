@@ -39,6 +39,7 @@ const schema = z
       .transform((v) => parseAmountToCents(v))
       .refine((v): v is number => v !== null && v > 0, "Montant invalide (ex : 1250,50)"),
     paidBy: z.enum(["PATRICK", "CHARLOTTE", "BOTH"], { error: "Qui a payé ?" }),
+    kind: z.enum(["SHARED", "CURRENT"], { error: "Nature de la dépense ?" }),
     invoicePath: blobPath,
     invoiceName: optionalText,
     proofPath: blobPath,
@@ -77,6 +78,7 @@ export async function createExpense(prev: ExpenseFormState, formData: FormData):
       supplier: d.supplier,
       amountCents: d.amount,
       paidBy: d.paidBy,
+      kind: d.kind,
       invoicePath: d.invoicePath,
       invoiceName: d.invoiceName,
       proofPath: d.proofPath,

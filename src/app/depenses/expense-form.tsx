@@ -3,7 +3,7 @@
 import { uploadPresigned } from "@vercel/blob/client";
 import { useActionState, useState, useTransition, type FormEvent } from "react";
 import { BLOB_FOLDER, FILE_ACCEPT } from "@/lib/files";
-import { PAYER_LABELS, balanceLabel, computeSplit, formatCents, parseAmountToCents, type Payer } from "@/lib/split";
+import { KIND_LABELS, PAYER_LABELS, balanceLabel, computeSplit, formatCents, parseAmountToCents, type ExpenseKind, type Payer } from "@/lib/split";
 import { createExpense, type ExpenseFormState } from "./actions";
 import { NEW_CATEGORY } from "./constants";
 
@@ -97,9 +97,10 @@ function Fields({
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? NEW_CATEGORY);
   const [amount, setAmount] = useState("");
   const [paidBy, setPaidBy] = useState<Payer>("PATRICK");
+  const [kind, setKind] = useState<ExpenseKind>("SHARED");
 
   const cents = parseAmountToCents(amount);
-  const split = cents ? computeSplit(cents, paidBy) : null;
+  const split = cents && kind === "SHARED" ? computeSplit(cents, paidBy) : null;
 
   return (
     <>
@@ -164,6 +165,25 @@ function Fields({
         </div>
         {errors.paidBy && <p className="error">{errors.paidBy}</p>}
       </fieldset>
+
+      <fieldset>
+        <legend className="label">Nature</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {(Object.keys(KIND_LABELS) as ExpenseKind[]).map((k) => (
+            <label key={k} className="chip">
+              <input type="radio" name="kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="sr-only" />
+              {KIND_LABELS[k]}
+            </label>
+          ))}
+        </div>
+        {errors.kind && <p className="error">{errors.kind}</p>}
+      </fieldset>
+
+      {cents && kind === "CURRENT" && (
+        <p className="rounded-lg bg-stone-100 p-3 text-sm">
+          Non partagée : reste à la charge de qui l&apos;a payée, n&apos;entre ni dans les soldes ni dans la vente.
+        </p>
+      )}
 
       {split && (
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-stone-100 p-3 text-sm">
