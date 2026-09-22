@@ -1,17 +1,27 @@
 import { get } from "@vercel/blob";
+import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const FIELDS = {
+  facture: { path: "invoicePath", name: "invoiceName" },
+  justificatif: { path: "proofPath", name: "proofName" },
+  "justificatif-2": { path: "proof2Path", name: "proof2Name" },
+} as const;
+
 // Sert une facture ou un justificatif depuis le store Blob privé, après vérification de la session.
+// Les fichiers importés du Google Sheet sont des liens Drive : on redirige simplement vers eux.
 export async function GET(_request: Request, ctx: RouteContext<"/api/files/[id]/[kind]">) {
   if (!(await isAuthenticated())) return new Response("Non autorisé", { status: 401 });
   const { id, kind } = await ctx.params;
-  if (kind !== "facture" && kind !== "justificatif") return new Response("Introuvable", { status: 404 });
+  if (!(kind in FIELDS)) return new Response("Introuvable", { status: 404 });
+  const field = FIELDS[kind as keyof typeof FIELDS];
 
   const expense = await prisma.expense.findUnique({ where: { id } });
-  const path = kind === "facture" ? expense?.invoicePath : expense?.proofPath;
-  const name = (kind === "facture" ? expense?.invoiceName : expense?.proofName) ?? kind;
+  const path = expense?.[field.path];
+  const name = expense?.[field.name] ?? kind;
   if (!path) return new Response("Introuvable", { status: 404 });
+  if (path.startsWith("https://")) redirect(path);
 
   const file = await get(path, { access: "private" }).catch((error) => {
     console.error("Lecture Blob impossible", path, error);

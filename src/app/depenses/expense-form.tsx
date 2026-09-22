@@ -3,7 +3,7 @@
 import { upload } from "@vercel/blob/client";
 import { useActionState, useState, useTransition, type FormEvent } from "react";
 import { BLOB_FOLDER, FILE_ACCEPT } from "@/lib/files";
-import { PAYER_LABELS, computeSplit, formatCents, parseAmountToCents, type Payer } from "@/lib/split";
+import { PAYER_LABELS, balanceLabel, computeSplit, formatCents, parseAmountToCents, type Payer } from "@/lib/split";
 import { createExpense, type ExpenseFormState } from "./actions";
 import { NEW_CATEGORY } from "./constants";
 
@@ -159,9 +159,9 @@ function Fields({
           <dd className="text-right tabular-nums">{formatCents(split.paidPatrick)}</dd>
           <dt>Charlotte a payé</dt>
           <dd className="text-right tabular-nums">{formatCents(split.paidCharlotte)}</dd>
-          <dt className="font-medium">Surplus Patrick</dt>
-          <dd className={`text-right font-medium tabular-nums ${split.surplusPatrick < 0 ? "text-red-700" : "text-green-700"}`}>
-            {formatCents(split.surplusPatrick)}
+          <dt className="font-medium">{balanceLabel(split.owedByCharlotte)}</dt>
+          <dd className="text-right font-medium tabular-nums">
+            {formatCents(Math.abs(split.owedByCharlotte))}
           </dd>
         </dl>
       )}

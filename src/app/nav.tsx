@@ -6,7 +6,7 @@ const TABS = [
   { href: "/depenses", label: "📋 Dépenses" },
 ] as const;
 
-export function Nav({ current }: { current: (typeof TABS)[number]["href"] }) {
+export function Nav({ current }: { current?: (typeof TABS)[number]["href"] }) {
   return (
     <header className="mb-6 flex items-center justify-between gap-4">
       <nav className="flex gap-1 rounded-lg bg-stone-200 p-1 text-sm font-medium">

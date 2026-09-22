@@ -16,7 +16,7 @@ export type Split = {
   shareCharlotte: number;
   paidPatrick: number;
   paidCharlotte: number;
-  surplusPatrick: number;
+  owedByCharlotte: number;
 };
 
 /** Convertit "1 234,56" / "1234.5" en centimes. Renvoie null si invalide. */
@@ -37,10 +37,18 @@ export function computeSplit(amountCents: number, paidBy: Payer): Split {
   if (paidBy === "BOTH") paidPatrick = Math.round(amountCents / 2);
   const paidCharlotte = paidBy === "PATRICK" ? 0 : amountCents - paidPatrick;
 
-  // Formule reprise du Google Sheet : (Patrick a payé − Part Patrick) − (Charlotte a payé − Part Charlotte)
-  const surplusPatrick = paidPatrick - sharePatrick - (paidCharlotte - shareCharlotte);
+  // Ce que Charlotte doit à Patrick sur cette dépense = ce que Patrick a avancé au-delà de sa part.
+  // (Équivaut à Part Charlotte − Charlotte a payé.) Négatif : c'est Patrick qui doit à Charlotte.
+  const owedByCharlotte = paidPatrick - sharePatrick;
 
-  return { sharePatrick, shareCharlotte, paidPatrick, paidCharlotte, surplusPatrick };
+  return { sharePatrick, shareCharlotte, paidPatrick, paidCharlotte, owedByCharlotte };
+}
+
+/** Traduit un solde en phrase : qui doit combien à qui. */
+export function balanceLabel(owedByCharlotteCents: number) {
+  if (owedByCharlotteCents > 0) return "Charlotte doit à Patrick";
+  if (owedByCharlotteCents < 0) return "Patrick doit à Charlotte";
+  return "Comptes à l'équilibre";
 }
 
 export const centsToDecimalString = (cents: number) => (cents / 100).toFixed(2);

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { PAYER_LABELS, decimalToCents, formatCents } from "@/lib/split";
+import { PAYER_LABELS, balanceLabel, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
 
 type SortKey = "date" | "categorie";
@@ -23,14 +23,14 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
 
   const [expenses, totals] = await Promise.all([
     prisma.expense.findMany({ include: { category: true }, orderBy: ORDER_BY[sort](order) }),
-    prisma.expense.aggregate({ _sum: { amount: true, sharePatrick: true, shareCharlotte: true, surplusPatrick: true } }),
+    prisma.expense.aggregate({ _sum: { amount: true, sharePatrick: true, shareCharlotte: true, owedByCharlotte: true } }),
   ]);
 
   const sum = {
     amount: decimalToCents(totals._sum.amount),
     sharePatrick: decimalToCents(totals._sum.sharePatrick),
     shareCharlotte: decimalToCents(totals._sum.shareCharlotte),
-    surplusPatrick: decimalToCents(totals._sum.surplusPatrick),
+    owedByCharlotte: decimalToCents(totals._sum.owedByCharlotte),
   };
 
   // Lien d'en-tête de colonne : re-cliquer sur la colonne active inverse l'ordre.
@@ -43,16 +43,21 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-6">
       <Nav current="/depenses" />
-      <h1 className="mb-5 text-xl font-semibold">
-        Dépenses <span className="text-stone-500">({expenses.length})</span>
-      </h1>
+      <div className="mb-5 flex items-baseline justify-between gap-4">
+        <h1 className="text-xl font-semibold">
+          Dépenses <span className="text-stone-500">({expenses.length})</span>
+        </h1>
+        <Link href="/import" className="text-sm text-stone-600 underline">
+          Importer depuis le Google Sheet
+        </Link>
+      </div>
 
       {/* Résumé visible d'un coup d'œil sur téléphone */}
       <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Total dépensé" cents={sum.amount} />
         <Stat label="Part Patrick (70 %)" cents={sum.sharePatrick} />
         <Stat label="Part Charlotte (30 %)" cents={sum.shareCharlotte} />
-        <Stat label="Surplus cumulé Patrick" cents={sum.surplusPatrick} signed />
+        <Stat label={balanceLabel(sum.owedByCharlotte)} cents={Math.abs(sum.owedByCharlotte)} highlight />
       </dl>
 
       {expenses.length === 0 ? (
@@ -76,7 +81,9 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <th className="px-2.5 py-2">Payé par</th>
                 <th className="px-2.5 py-2 text-right">Part Patrick</th>
                 <th className="px-2.5 py-2 text-right">Part Charlotte</th>
-                <th className="px-2.5 py-2 text-right">Surplus Patrick</th>
+                <th className="px-2.5 py-2 text-right" title="Positif : Charlotte doit à Patrick. Négatif : Patrick doit à Charlotte.">
+                  Charlotte doit
+                </th>
                 <th className="px-2.5 py-2">Fichiers</th>
               </tr>
             </thead>
@@ -91,10 +98,13 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                   <td className="px-2.5 py-2">{PAYER_LABELS[e.paidBy]}</td>
                   <Money cents={decimalToCents(e.sharePatrick)} />
                   <Money cents={decimalToCents(e.shareCharlotte)} />
-                  <Money cents={decimalToCents(e.surplusPatrick)} signed />
+                  <Money cents={decimalToCents(e.owedByCharlotte)} signed />
                   <td className="space-x-2 px-2.5 py-2 text-base">
                     <FileLink id={e.id} kind="facture" name={e.invoiceName} label="📄" title="Facture" />
                     <FileLink id={e.id} kind="justificatif" name={e.proofName} label="🧾" title="Justificatif de paiement" />
+                    {e.proof2Name && (
+                      <FileLink id={e.id} kind="justificatif-2" name={e.proof2Name} label="🧾" title="Justificatif 2" />
+                    )}
                   </td>
                 </tr>
               ))}
@@ -106,7 +116,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <td />
                 <Money cents={sum.sharePatrick} />
                 <Money cents={sum.shareCharlotte} />
-                <Money cents={sum.surplusPatrick} signed />
+                <Money cents={sum.owedByCharlotte} signed />
                 <td />
               </tr>
             </tfoot>
@@ -127,11 +137,11 @@ function Money({ cents, bold, signed }: { cents: number; bold?: boolean; signed?
   );
 }
 
-function Stat({ label, cents, signed }: { label: string; cents: number; signed?: boolean }) {
+function Stat({ label, cents, highlight }: { label: string; cents: number; highlight?: boolean }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-white p-3">
-      <dt className="text-xs text-stone-500">{label}</dt>
-      <dd className={`text-lg font-semibold tabular-nums ${signed ? signColor(cents) : ""}`}>{formatCents(cents)}</dd>
+    <div className={`rounded-lg border p-3 ${highlight ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white"}`}>
+      <dt className={`text-xs ${highlight ? "text-stone-300" : "text-stone-500"}`}>{label}</dt>
+      <dd className="text-lg font-semibold tabular-nums">{formatCents(cents)}</dd>
     </div>
   );
 }
@@ -139,7 +149,7 @@ function Stat({ label, cents, signed }: { label: string; cents: number; signed?:
 function FileLink({ id, kind, name, label, title }: { id: string; kind: string; name: string | null; label: string; title: string }) {
   if (!name) return <span className="opacity-20" title={`${title} : aucun fichier`}>{label}</span>;
   return (
-    <a href={`/api/files/${id}/${kind}`} title={`${title} : ${name}`} aria-label={`Télécharger ${title.toLowerCase()}`}>
+    <a href={`/api/files/${id}/${kind}`} target="_blank" rel="noreferrer" title={`${title} : ${name}`} aria-label={`Télécharger ${title.toLowerCase()}`}>
       {label}
     </a>
   );

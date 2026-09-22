@@ -11,7 +11,8 @@ Remplace le Google Sheet `Suivi_Depenses_Maison_Noury`.
 | --- | --- |
 | `prisma/schema.prisma` | Structure de la base (dépenses, catégories) |
 | `prisma/migrations/` | Historique de la base (inclut les 3 catégories par défaut) |
-| `src/lib/split.ts` | Règles de répartition 70/30 et calcul du surplus (testées dans `split.test.ts`) |
+| `src/lib/split.ts` | Règles de répartition 70/30 et calcul de « Charlotte doit à Patrick » (testées dans `split.test.ts`) |
+| `src/lib/sheet-import.ts` + `src/app/import/` | Import de l'historique depuis l'export CSV du Google Sheet (sans doublons) |
 | `src/app/page.tsx` | Page « Nouvelle dépense » |
 | `src/app/depenses/page.tsx` | Liste des dépenses : tri date/catégorie, totaux, téléchargements |
 | `src/app/depenses/` | Formulaire + enregistrement (Server Action) |

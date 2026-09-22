@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
+import { expenseData } from "@/lib/expenses";
 import { BLOB_FOLDER } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
+import { parseAmountToCents } from "@/lib/split";
 import { NEW_CATEGORY } from "./constants";
-import { centsToDecimalString, computeSplit, parseAmountToCents } from "@/lib/split";
 
 export type ExpenseFormState = {
   error?: string;
@@ -70,27 +71,19 @@ export async function createExpense(prev: ExpenseFormState, formData: FormData):
         ).id
       : d.categoryId;
 
-  const split = computeSplit(d.amount, d.paidBy);
-  const money = (cents: number) => centsToDecimalString(cents);
-
   await prisma.expense.create({
-    data: {
-      date: new Date(`${d.date}T00:00:00Z`),
+    data: expenseData({
+      date: d.date,
       categoryId,
       description: d.description,
       supplier: d.supplier,
-      amount: money(d.amount),
+      amountCents: d.amount,
       paidBy: d.paidBy,
-      sharePatrick: money(split.sharePatrick),
-      shareCharlotte: money(split.shareCharlotte),
-      paidPatrick: money(split.paidPatrick),
-      paidCharlotte: money(split.paidCharlotte),
-      surplusPatrick: money(split.surplusPatrick),
       invoicePath: d.invoicePath,
       invoiceName: d.invoiceName,
       proofPath: d.proofPath,
       proofName: d.proofName,
-    },
+    }),
   });
 
   revalidatePath("/", "layout");

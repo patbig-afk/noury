@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSplit, parseAmountToCents } from "./split";
+import { balanceLabel, computeSplit, parseAmountToCents } from "./split";
 
 describe("parseAmountToCents", () => {
   it.each([
@@ -21,7 +21,7 @@ describe("computeSplit", () => {
       shareCharlotte: 30_00,
       paidPatrick: 100_00,
       paidCharlotte: 0,
-      surplusPatrick: 60_00,
+      owedByCharlotte: 30_00,
     });
   });
 
@@ -29,7 +29,7 @@ describe("computeSplit", () => {
     expect(computeSplit(100_00, "CHARLOTTE")).toMatchObject({
       paidPatrick: 0,
       paidCharlotte: 100_00,
-      surplusPatrick: -140_00,
+      owedByCharlotte: -70_00,
     });
   });
 
@@ -37,7 +37,7 @@ describe("computeSplit", () => {
     expect(computeSplit(100_00, "BOTH")).toMatchObject({
       paidPatrick: 50_00,
       paidCharlotte: 50_00,
-      surplusPatrick: -40_00,
+      owedByCharlotte: -20_00,
     });
   });
 
@@ -45,5 +45,13 @@ describe("computeSplit", () => {
     const s = computeSplit(333, "BOTH");
     expect(s.sharePatrick + s.shareCharlotte).toBe(333);
     expect(s.paidPatrick + s.paidCharlotte).toBe(333);
+  });
+});
+
+describe("balanceLabel", () => {
+  it("dit qui doit à qui", () => {
+    expect(balanceLabel(30_00)).toBe("Charlotte doit à Patrick");
+    expect(balanceLabel(-70_00)).toBe("Patrick doit à Charlotte");
+    expect(balanceLabel(0)).toBe("Comptes à l'équilibre");
   });
 });
