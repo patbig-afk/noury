@@ -34,7 +34,15 @@ async function submit(prev: ExpenseFormState, formData: FormData): Promise<Expen
   return createExpense(prev, formData);
 }
 
-export function ExpenseForm({ categories, today }: { categories: Category[]; today: string }) {
+export function ExpenseForm({
+  categories,
+  today,
+  filesEnabled,
+}: {
+  categories: Category[];
+  today: string;
+  filesEnabled: boolean;
+}) {
   const [state, formAction, pending] = useActionState(submit, { savedCount: 0 });
   const [, startTransition] = useTransition();
 
@@ -54,7 +62,13 @@ export function ExpenseForm({ categories, today }: { categories: Category[]; tod
       )}
 
       {/* La clé change après chaque enregistrement réussi → champs remis à zéro. */}
-      <Fields key={state.savedCount} categories={categories} today={today} errors={state.fieldErrors ?? {}} />
+      <Fields
+        key={state.savedCount}
+        categories={categories}
+        today={today}
+        filesEnabled={filesEnabled}
+        errors={state.fieldErrors ?? {}}
+      />
 
       {state.error && (
         <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -72,10 +86,12 @@ export function ExpenseForm({ categories, today }: { categories: Category[]; tod
 function Fields({
   categories,
   today,
+  filesEnabled,
   errors,
 }: {
   categories: Category[];
   today: string;
+  filesEnabled: boolean;
   errors: Partial<Record<string, string>>;
 }) {
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? NEW_CATEGORY);
@@ -166,12 +182,19 @@ function Fields({
         </dl>
       )}
 
+      {!filesEnabled && (
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          📎 Envoi de fichiers indisponible : aucun store Vercel Blob n&apos;est connecté (variable
+          BLOB_READ_WRITE_TOKEN absente ou invalide). La dépense peut quand même être enregistrée sans fichier.
+        </p>
+      )}
+
       <Field label="Facture (PDF ou photo)">
-        <input name="invoice" type="file" accept={FILE_ACCEPT} className="file-field" />
+        <input name="invoice" type="file" accept={FILE_ACCEPT} disabled={!filesEnabled} className="file-field" />
       </Field>
 
       <Field label="Justificatif de paiement (PDF ou capture)">
-        <input name="proof" type="file" accept={FILE_ACCEPT} className="file-field" />
+        <input name="proof" type="file" accept={FILE_ACCEPT} disabled={!filesEnabled} className="file-field" />
       </Field>
     </>
   );

@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { isBlobConfigured } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "./depenses/expense-form";
 import { Nav } from "./nav";
@@ -15,7 +16,7 @@ export default async function NewExpensePage() {
     <main className="mx-auto w-full max-w-lg px-4 py-6">
       <Nav current="/" />
       <h1 className="mb-5 text-xl font-semibold">Nouvelle dépense</h1>
-      <ExpenseForm categories={categories} today={today} />
+      <ExpenseForm categories={categories} today={today} filesEnabled={isBlobConfigured()} />
     </main>
   );
 }
