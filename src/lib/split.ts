@@ -47,3 +47,7 @@ export const centsToDecimalString = (cents: number) => (cents / 100).toFixed(2);
 
 const eur = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 export const formatCents = (cents: number) => eur.format(cents / 100);
+
+/** Convertit une valeur Decimal de la base (ex : "1250.50") en centimes. */
+export const decimalToCents = (value: { toString(): string } | null | undefined) =>
+  value == null ? 0 : Math.round(Number(value.toString()) * 100);

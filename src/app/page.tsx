@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ExpenseForm } from "./depenses/expense-form";
-import { logout } from "./login/actions";
+import { Nav } from "./nav";
 
 export default async function NewExpensePage() {
   await connection();
@@ -13,12 +13,8 @@ export default async function NewExpensePage() {
 
   return (
     <main className="mx-auto w-full max-w-lg px-4 py-6">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">🏡 Nouvelle dépense</h1>
-        <form action={logout}>
-          <button className="text-sm text-stone-500 underline">Déconnexion</button>
-        </form>
-      </header>
+      <Nav current="/" />
+      <h1 className="mb-5 text-xl font-semibold">Nouvelle dépense</h1>
       <ExpenseForm categories={categories} today={today} />
     </main>
   );

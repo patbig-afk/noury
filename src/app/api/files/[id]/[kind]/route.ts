@@ -13,8 +13,11 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/files/[id]/
   const name = (kind === "facture" ? expense?.invoiceName : expense?.proofName) ?? kind;
   if (!path) return new Response("Introuvable", { status: 404 });
 
-  const file = await get(path, { access: "private" });
-  if (!file || file.statusCode !== 200) return new Response("Introuvable", { status: 404 });
+  const file = await get(path, { access: "private" }).catch((error) => {
+    console.error("Lecture Blob impossible", path, error);
+    return null;
+  });
+  if (!file || file.statusCode !== 200) return new Response("Fichier introuvable", { status: 404 });
 
   return new Response(file.stream, {
     headers: {
