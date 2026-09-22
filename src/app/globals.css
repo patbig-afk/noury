@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+@layer components {
+  .label {
+    @apply mb-1 block text-sm font-medium text-stone-700;
+  }
+  /* text-base (16px) évite le zoom automatique d'iOS sur les champs */
+  .field {
+    @apply block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base shadow-sm focus:border-stone-500 focus:ring-2 focus:ring-stone-200 focus:outline-none;
+  }
+  .file-field {
+    @apply block w-full text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-200 file:px-3 file:py-2.5 file:text-sm file:font-medium;
+  }
+  .chip {
+    @apply flex cursor-pointer items-center justify-center rounded-lg border border-stone-300 bg-white py-2.5 text-sm font-medium has-checked:border-stone-900 has-checked:bg-stone-900 has-checked:text-white has-focus-visible:ring-2 has-focus-visible:ring-stone-400;
+  }
+  .btn-primary {
+    @apply rounded-lg bg-stone-900 px-4 py-3 text-base font-semibold text-white disabled:opacity-50;
+  }
+  .error {
+    @apply mt-1 block text-sm text-red-600;
+  }
+}

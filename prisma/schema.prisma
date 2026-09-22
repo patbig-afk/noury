@@ -1,0 +1,54 @@
+// Schéma de la base "Suivi dépenses maison Noury"
+// Docs : https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Payer {
+  PATRICK
+  CHARLOTTE
+  BOTH
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  expenses  Expense[]
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description String
+  supplier    String
+  amount      Decimal  @db.Decimal(12, 2)
+  paidBy      Payer
+
+  // Valeurs calculées à l'enregistrement (cf. src/lib/split.ts)
+  sharePatrick   Decimal @db.Decimal(12, 2)
+  shareCharlotte Decimal @db.Decimal(12, 2)
+  paidPatrick    Decimal @db.Decimal(12, 2)
+  paidCharlotte  Decimal @db.Decimal(12, 2)
+  surplusPatrick Decimal @db.Decimal(12, 2)
+
+  // Fichiers stockés dans un store Vercel Blob privé (on garde le pathname, pas d'URL publique)
+  invoicePath  String?
+  invoiceName  String?
+  proofPath    String?
+  proofName    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([categoryId])
+}
