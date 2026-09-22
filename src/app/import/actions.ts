@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { expenseData } from "@/lib/expenses";
 import { prisma } from "@/lib/prisma";
-import { expenseKey, parseSheetCsv } from "@/lib/sheet-import";
+import { expenseKey, fileLabel, parseSheetCsv } from "@/lib/sheet-import";
 import { decimalToCents } from "@/lib/split";
 
 export type ImportReport = {
@@ -62,11 +62,11 @@ export async function importSheet(_prev: ImportReport, formData: FormData): Prom
             amountCents: r.amountCents,
             paidBy: r.paidBy,
             invoicePath: r.invoiceUrl,
-            invoiceName: r.invoiceUrl && "Facture (Google Drive)",
+            invoiceName: r.invoiceUrl && fileLabel(r.invoiceUrl, "Facture (Google Drive)"),
             proofPath: r.proofUrl,
-            proofName: r.proofUrl && "Justificatif (Google Drive)",
+            proofName: r.proofUrl && fileLabel(r.proofUrl, "Justificatif (Google Drive)"),
             proof2Path: r.proof2Url,
-            proof2Name: r.proof2Url && "Justificatif 2 (Google Drive)",
+            proof2Name: r.proof2Url && fileLabel(r.proof2Url, "Justificatif 2 (Google Drive)"),
           }),
         ),
       });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv, parseSheetCsv } from "./sheet-import";
+import { fileLabel, parseCsv, parseSheetCsv } from "./sheet-import";
 
 // Même structure que l'export CSV du Sheet (titre, sous-titre, en-têtes, données), avec des valeurs fictives.
 const CSV = [
@@ -8,7 +8,7 @@ const CSV = [
   "Date,Catégorie,Description,Fournisseur,Montant Total,Payé par,Part Patrick (70%),Part Charlotte (30%),Patrick a payé,Charlotte a payé,Surplus Patrick,Factures,Justificatif paiement,Justificatif 2",
   '18/05/2026,Travaux / artisans,Acompte,Artisan A,"1234,5",Patrick,1,1,1,1,1,https://drive.google.com/f1,https://drive.google.com/p1,',
   '05/02/2026,Notaire / achat,"Achat, versement 1",Notaire,20750,Les deux,1,1,1,1,1,,https://drive.google.com/p2,https://drive.google.com/p3',
-  "20/05/2026,Notaire / achat,Versement Charlotte,Notaire,124500,Charlotte,,,,,,,,",
+  "20/05/2026,Notaire / achat,Versement Charlotte,Notaire,124500,Charlotte,,,,,,depenses/facture-AbCdEfGhIjKlMnOpQrStUvWxYz0123.pdf,autres/x.pdf,",
   ",,,,,,,,,,,,,",
   "31/02/2026,Travaux / artisans,Mauvaise date,Artisan B,abc,Personne,,,,,,,,",
 ].join("\r\n");
@@ -51,5 +51,18 @@ describe("parseSheetCsv", () => {
 
   it("refuse un fichier sans en-têtes", () => {
     expect(parseSheetCsv("a,b\n1,2").errors[0].message).toMatch(/en-têtes/);
+  });
+});
+
+describe("fichiers déjà déposés dans le store Blob", () => {
+  const { rows } = parseSheetCsv(CSV);
+
+  it("accepte un chemin du dossier depenses/ et ignore les autres", () => {
+    expect(rows[2]).toMatchObject({ invoiceUrl: "depenses/facture-AbCdEfGhIjKlMnOpQrStUvWxYz0123.pdf", proofUrl: null });
+  });
+
+  it("affiche le nom d'origine du fichier, sans suffixe aléatoire", () => {
+    expect(fileLabel("depenses/facture-AbCdEfGhIjKlMnOpQrStUvWxYz0123.pdf", "Drive")).toBe("facture.pdf");
+    expect(fileLabel("https://drive.google.com/f1", "Facture (Google Drive)")).toBe("Facture (Google Drive)");
   });
 });

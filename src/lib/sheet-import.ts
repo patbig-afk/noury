@@ -2,6 +2,7 @@
 // Seules les colonnes saisies à la main sont lues : les colonnes calculées du Sheet sont ignorées
 // et recalculées par l'app (cf. split.ts).
 
+import { BLOB_FOLDER } from "./files";
 import { parseAmountToCents, type Payer } from "./split";
 
 export type SheetRow = {
@@ -72,7 +73,17 @@ const COLUMNS = {
 
 const PAYERS: Record<string, Payer> = { patrick: "PATRICK", charlotte: "CHARLOTTE", "les deux": "BOTH" };
 
-const link = (value: string | undefined) => (value?.trim().startsWith("https://") ? value.trim() : null);
+// Cellule fichier : lien externe (Google Drive…) ou chemin d'un fichier déjà déposé dans le store Blob.
+const link = (value: string | undefined) => {
+  const v = value?.trim();
+  return v && (v.startsWith("https://") || v.startsWith(`${BLOB_FOLDER}/`)) ? v : null;
+};
+
+/** Nom affiché d'un fichier : nom d'origine pour un fichier Blob (sans le suffixe aléatoire), sinon libellé Drive. */
+export function fileLabel(path: string, driveLabel: string) {
+  if (path.startsWith("https://")) return driveLabel;
+  return path.split("/").pop()!.replace(/-[A-Za-z0-9]{30}(\.\w+)$/, "$1");
+}
 
 function parseFrenchDate(value: string) {
   const m = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
