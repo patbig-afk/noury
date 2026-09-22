@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { defineConfig } from "prisma/config";
+import { directDatabaseUrl } from "./db-url.mjs";
 
 // En local, Next.js lit .env.local : on fait pareil pour la CLI Prisma.
 // Sur Vercel, les variables sont déjà injectées.
@@ -13,6 +14,6 @@ export default defineConfig({
   },
   datasource: {
     // Les migrations passent par la connexion directe (non poolée) quand elle existe.
-    url: process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL,
+    url: directDatabaseUrl(),
   },
 });

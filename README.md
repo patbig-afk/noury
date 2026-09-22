@@ -27,6 +27,11 @@ Remplace le Google Sheet `Suivi_Depenses_Maison_Noury`.
 4. **Settings → Environment Variables** : ajouter `APP_PASSWORD` et `AUTH_SECRET` (`openssl rand -hex 32`).
 5. Déployer. Le build applique les migrations tout seul (`prisma migrate deploy`).
 
+> ⚠️ La base doit être connectée **à tous les environnements** (Production + Preview) : les branches
+> autres que `main` sont déployées en Preview. Sans base, le build s'arrête avec un message qui dit quoi faire.
+> Noms de variables acceptés : `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_PRISMA_URL` (+ `DATABASE_URL_UNPOOLED` /
+> `POSTGRES_URL_NON_POOLING` pour les migrations) — voir `db-url.mjs`.
+
 ## En local
 
 ```bash
