@@ -36,6 +36,9 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
     shareCharlotte: decimalToCents(totals._sum.shareCharlotte),
     owedByCharlotte: decimalToCents(totals._sum.owedByCharlotte),
   };
+  // Sans justificatif de paiement, la dépense est considérée comme restant à payer.
+  const toPay = (e: { proofName: string | null; proof2Name: string | null }) => !e.proofName && !e.proof2Name;
+  const toPayCount = expenses.filter(toPay).length;
   const status = computeCommitments(decimalToCents(totals._sum.paidPatrick), decimalToCents(totals._sum.paidCharlotte));
 
   // Lien d'en-tête de colonne : re-cliquer sur la colonne active inverse l'ordre.
@@ -51,6 +54,11 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
       <div className="mb-5 flex items-baseline justify-between gap-4">
         <h1 className="text-xl font-semibold">
           Dépenses <span className="text-stone-500">({expenses.length})</span>
+          {toPayCount > 0 && (
+            <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 align-middle text-sm font-medium text-amber-800">
+              ⚠️ {toPayCount} à payer
+            </span>
+          )}
         </h1>
         <Link href="/import" className="text-sm text-stone-600 underline">
           Importer depuis le Google Sheet
@@ -105,7 +113,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
             </thead>
             <tbody className="divide-y divide-stone-100">
               {expenses.map((e) => (
-                <tr key={e.id} className="hover:bg-stone-50">
+                <tr key={e.id} className={toPay(e) ? "bg-amber-50 hover:bg-amber-100" : "hover:bg-stone-50"}>
                   <td className="px-2.5 py-2 tabular-nums">{dateFormat.format(e.date)}</td>
                   <td className="px-2.5 py-2">
                     {e.category.name}
@@ -115,7 +123,14 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                       </span>
                     )}
                   </td>
-                  <td className="max-w-56 truncate px-2.5 py-2" title={e.description}>{e.description}</td>
+                  <td className="max-w-56 truncate px-2.5 py-2" title={e.description}>
+                    {toPay(e) && (
+                      <span className="mr-1.5 rounded bg-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-900" title="Aucun justificatif de paiement">
+                        À payer
+                      </span>
+                    )}
+                    {e.description}
+                  </td>
                   <td className="px-2.5 py-2">{e.supplier}</td>
                   <Money cents={decimalToCents(e.amount)} bold />
                   <td className="px-2.5 py-2">{PAYER_LABELS[e.paidBy]}</td>
@@ -142,6 +157,14 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                     />
                   </td>
                   <td className="px-1 py-2 text-right">
+                    <Link
+                      href={`/depenses/${e.id}/modifier`}
+                      title="Modifier"
+                      aria-label={`Modifier ${e.description} — ${e.supplier}`}
+                      className="rounded px-1.5 text-base opacity-60 hover:bg-stone-100 hover:opacity-100"
+                    >
+                      ✏️
+                    </Link>
                     <DeleteButton id={e.id} label={`${e.description} — ${e.supplier}`} />
                   </td>
                 </tr>

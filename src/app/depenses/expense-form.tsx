@@ -1,13 +1,28 @@
 "use client";
 
 import { uploadPresigned } from "@vercel/blob/client";
+import Link from "next/link";
 import { useActionState, useState, useTransition, type FormEvent } from "react";
 import { BLOB_FOLDER, FILE_ACCEPT } from "@/lib/files";
 import { KIND_LABELS, PAYER_LABELS, balanceLabel, computeSplit, formatCents, parseAmountToCents, type ExpenseKind, type Payer } from "@/lib/split";
-import { createExpense, type ExpenseFormState } from "./actions";
+import { createExpense, updateExpense, type ExpenseFormState } from "./actions";
 import { NEW_CATEGORY } from "./constants";
 
 type Category = { id: string; name: string };
+
+/** Dépense existante à modifier (montant en centimes, date AAAA-MM-JJ). */
+export type EditedExpense = {
+  id: string;
+  date: string;
+  categoryId: string;
+  description: string;
+  supplier: string;
+  amountCents: number;
+  paidBy: Payer;
+  kind: ExpenseKind;
+  invoiceName: string | null;
+  proofName: string | null;
+};
 
 // Envoie un fichier directement du navigateur vers le store Blob privé.
 async function uploadFile(formData: FormData, field: "invoice" | "proof") {
@@ -31,17 +46,19 @@ async function submit(prev: ExpenseFormState, formData: FormData): Promise<Expen
   } catch (error) {
     return { ...prev, fieldErrors: {}, error: `Échec de l'envoi du fichier : ${(error as Error).message}` };
   }
-  return createExpense(prev, formData);
+  return formData.has("id") ? updateExpense(prev, formData) : createExpense(prev, formData);
 }
 
 export function ExpenseForm({
   categories,
   today,
   filesEnabled,
+  expense,
 }: {
   categories: Category[];
   today: string;
   filesEnabled: boolean;
+  expense?: EditedExpense;
 }) {
   const [state, formAction, pending] = useActionState(submit, { savedCount: 0 });
   const [, startTransition] = useTransition();
@@ -55,6 +72,7 @@ export function ExpenseForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
+      {expense && <input type="hidden" name="id" value={expense.id} />}
       {state.lastSaved && !state.error && (
         <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
           ✅ Dépense enregistrée : {state.lastSaved}
@@ -68,6 +86,7 @@ export function ExpenseForm({
         today={today}
         filesEnabled={filesEnabled}
         errors={state.fieldErrors ?? {}}
+        expense={expense}
       />
 
       {state.error && (
@@ -77,8 +96,13 @@ export function ExpenseForm({
       )}
 
       <button type="submit" disabled={pending} className="btn-primary w-full">
-        {pending ? "Enregistrement…" : "Enregistrer la dépense"}
+        {pending ? "Enregistrement…" : expense ? "Enregistrer les modifications" : "Enregistrer la dépense"}
       </button>
+      {expense && (
+        <Link href="/depenses" className="block text-center text-sm text-stone-600 underline">
+          Annuler
+        </Link>
+      )}
     </form>
   );
 }
@@ -88,16 +112,18 @@ function Fields({
   today,
   filesEnabled,
   errors,
+  expense,
 }: {
   categories: Category[];
   today: string;
   filesEnabled: boolean;
   errors: Partial<Record<string, string>>;
+  expense?: EditedExpense;
 }) {
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? NEW_CATEGORY);
-  const [amount, setAmount] = useState("");
-  const [paidBy, setPaidBy] = useState<Payer>("PATRICK");
-  const [kind, setKind] = useState<ExpenseKind>("SHARED");
+  const [categoryId, setCategoryId] = useState(expense?.categoryId ?? categories[0]?.id ?? NEW_CATEGORY);
+  const [amount, setAmount] = useState(expense ? (expense.amountCents / 100).toFixed(2).replace(".", ",") : "");
+  const [paidBy, setPaidBy] = useState<Payer>(expense?.paidBy ?? "PATRICK");
+  const [kind, setKind] = useState<ExpenseKind>(expense?.kind ?? "SHARED");
 
   const cents = parseAmountToCents(amount);
   const split = cents && kind === "SHARED" ? computeSplit(cents, paidBy) : null;
@@ -105,7 +131,7 @@ function Fields({
   return (
     <>
       <Field label="Date" error={errors.date}>
-        <input name="date" type="date" defaultValue={today} required className="field" />
+        <input name="date" type="date" defaultValue={expense?.date ?? today} required className="field" />
       </Field>
 
       <Field label="Catégorie" error={errors.categoryId}>
@@ -126,11 +152,11 @@ function Fields({
       )}
 
       <Field label="Description" error={errors.description}>
-        <input name="description" required className="field" placeholder="ex : Acompte plomberie" />
+        <input name="description" defaultValue={expense?.description} required className="field" placeholder="ex : Acompte plomberie" />
       </Field>
 
       <Field label="Fournisseur" error={errors.supplier}>
-        <input name="supplier" required className="field" placeholder="ex : Leroy Merlin" />
+        <input name="supplier" defaultValue={expense?.supplier} required className="field" placeholder="ex : Leroy Merlin" />
       </Field>
 
       <Field label="Montant total (€)" error={errors.amount}>
@@ -209,22 +235,27 @@ function Fields({
         </p>
       )}
 
-      <Field label="Facture (PDF ou photo)">
+      <Field label="Facture (PDF ou photo)" hint={currentFile(expense?.invoiceName)}>
         <input name="invoice" type="file" accept={FILE_ACCEPT} disabled={!filesEnabled} className="file-field" />
       </Field>
 
-      <Field label="Justificatif de paiement (PDF ou capture)">
+      <Field label="Justificatif de paiement (PDF ou capture)" hint={currentFile(expense?.proofName)}>
         <input name="proof" type="file" accept={FILE_ACCEPT} disabled={!filesEnabled} className="file-field" />
       </Field>
     </>
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+// En modification : rappelle le fichier déjà joint, remplacé seulement si on en choisit un autre.
+const currentFile = (name: string | null | undefined) =>
+  name === undefined ? undefined : name ? `Actuel : ${name} — choisir un fichier pour le remplacer` : "Aucun fichier joint";
+
+function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="label">{label}</span>
       {children}
+      {hint && <span className="mt-1 block truncate text-xs text-stone-500">{hint}</span>}
       {error && <span className="error">{error}</span>}
     </label>
   );
