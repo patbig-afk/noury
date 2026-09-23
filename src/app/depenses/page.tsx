@@ -6,6 +6,7 @@ import { computeCommitments, type PersonStatus } from "@/lib/commitments";
 import { PAYER_LABELS, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
 import { DeleteButton } from "./delete-button";
+import { FileViewer } from "./file-viewer";
 
 type SortKey = "date" | "categorie";
 type Order = "asc" | "desc";
@@ -128,11 +129,17 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                     <td colSpan={3} className="px-2.5 py-2 text-center text-xs text-stone-500">non partagée</td>
                   )}
                   <td className="space-x-2 px-2.5 py-2 text-base">
-                    <FileLink id={e.id} kind="facture" name={e.invoiceName} label="📄" title="Facture" />
-                    <FileLink id={e.id} kind="justificatif" name={e.proofName} label="🧾" title="Justificatif de paiement" />
-                    {e.proof2Name && (
-                      <FileLink id={e.id} kind="justificatif-2" name={e.proof2Name} label="🧾" title="Justificatif 2" />
-                    )}
+                    <FileViewer
+                      id={e.id}
+                      caption={`${dateFormat.format(e.date)} · ${e.description} — ${e.supplier}`}
+                      files={[
+                        { kind: "facture", title: "Facture", label: "📄", name: e.invoiceName, external: !!e.invoicePath?.startsWith("https://") },
+                        { kind: "justificatif", title: "Justificatif de paiement", label: "🧾", name: e.proofName, external: !!e.proofPath?.startsWith("https://") },
+                        ...(e.proof2Name
+                          ? [{ kind: "justificatif-2", title: "Justificatif 2", label: "🧾", name: e.proof2Name, external: !!e.proof2Path?.startsWith("https://") }]
+                          : []),
+                      ]}
+                    />
                   </td>
                   <td className="px-1 py-2 text-right">
                     <DeleteButton id={e.id} label={`${e.description} — ${e.supplier}`} />
@@ -205,14 +212,5 @@ function Person({ name, share, s }: { name: string; share: string; s: PersonStat
         )}
       </dl>
     </div>
-  );
-}
-
-function FileLink({ id, kind, name, label, title }: { id: string; kind: string; name: string | null; label: string; title: string }) {
-  if (!name) return <span className="opacity-20" title={`${title} : aucun fichier`}>{label}</span>;
-  return (
-    <a href={`/api/files/${id}/${kind}`} target="_blank" rel="noreferrer" title={`${title} : ${name}`} aria-label={`Télécharger ${title.toLowerCase()}`}>
-      {label}
-    </a>
   );
 }
