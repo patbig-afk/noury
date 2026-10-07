@@ -6,14 +6,15 @@ import { centsToDecimalString, formatCents, parseAmountToCents } from "@/lib/spl
 
 export type BudgetAmountState = { error?: string; saved?: string };
 
-/** Modifie le montant prévu d'un poste (ex : après signature d'un devis). */
-export async function updateBudgetAmount(_prev: BudgetAmountState, formData: FormData): Promise<BudgetAmountState> {
+/** Modifie le montant prévu et les notes d'un poste (ex : après signature d'un devis). */
+export async function updateBudgetLine(_prev: BudgetAmountState, formData: FormData): Promise<BudgetAmountState> {
   const id = String(formData.get("id") ?? "");
   const cents = parseAmountToCents(String(formData.get("amount") ?? ""));
   if (cents === null) return { error: "Montant invalide : écris par ex. 13100 ou 13 100,50 (sans point pour les milliers)" };
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 2000) || null;
 
   const updated = await prisma.budgetLine
-    .update({ where: { id }, data: { amount: centsToDecimalString(cents) } })
+    .update({ where: { id }, data: { amount: centsToDecimalString(cents), notes } })
     .catch((error) => {
       console.error("Budget non modifié", id, error);
       return null;

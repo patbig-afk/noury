@@ -36,6 +36,7 @@ model BudgetLine {
   name      String    @unique
   position  Int
   amount    Decimal   @db.Decimal(12, 2)
+  notes     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   expenses  Expense[]

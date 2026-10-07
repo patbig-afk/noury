@@ -26,6 +26,7 @@ export default async function BudgetPage() {
       orderBy: { date: "desc" },
     }),
   ]);
+  const notesById = new Map(lines.map((l) => [l.id, l.notes]));
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
@@ -66,9 +67,12 @@ export default async function BudgetPage() {
                 {r.remaining < 0 ? `Dépassé de ${formatCents(-r.remaining)}` : `Reste ${formatCents(r.remaining)}`}
               </span>
             </div>
+            {notesById.get(r.id) && (
+              <p className="mt-2 rounded bg-stone-50 px-2 py-1.5 text-sm whitespace-pre-line text-stone-700">📝 {notesById.get(r.id)}</p>
+            )}
             <details className="mt-1 text-sm">
-              <summary className="cursor-pointer text-stone-500">Modifier le budget</summary>
-              <BudgetAmountForm id={r.id} name={r.name} budgetCents={r.budget} />
+              <summary className="cursor-pointer text-stone-500">Modifier budget / notes</summary>
+              <BudgetAmountForm id={r.id} name={r.name} budgetCents={r.budget} notes={notesById.get(r.id) ?? null} />
             </details>
           </li>
         ))}
