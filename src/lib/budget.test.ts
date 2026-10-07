@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPercent, summarizeBudget } from "./budget";
+import { formatPercent, projectCost, summarizeBudget } from "./budget";
 
 describe("summarizeBudget", () => {
   const lines = [
@@ -39,4 +39,22 @@ describe("formatPercent", () => {
     [1.2, "120 %"],
     [Infinity, "—"],
   ])("%s → %s", (ratio, label) => expect(formatPercent(ratio)).toBe(label));
+});
+
+describe("projectCost", () => {
+  it("additionne l'achat et les travaux (prévu, ou dépensé si dépassement) et compare au notarié", () => {
+    const rows = [
+      { budget: 100_00, spent: 40_00 }, // reste dans le budget → 100
+      { budget: 0, spent: 30_00 }, // dépense sans budget → 30
+    ];
+    expect(projectCost(rows, 500_00, 600_00, 0.7)).toEqual({
+      purchase: 500_00,
+      works: 130_00,
+      total: 630_00,
+      notarial: 600_00,
+      gap: 30_00,
+      gapPatrick: 21_00,
+      gapCharlotte: 9_00,
+    });
+  });
 });

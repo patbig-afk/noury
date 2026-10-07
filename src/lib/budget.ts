@@ -39,3 +39,25 @@ export function summarizeBudget(
 
 export const formatPercent = (ratio: number) =>
   Number.isFinite(ratio) ? `${Math.round(ratio * 100)} %` : "—";
+
+export type ProjectCost = {
+  /** Achat et frais hors travaux, au réel (dépenses partagées sans poste). */
+  purchase: number;
+  /** Travaux à l'arrivée : par poste, le plus élevé entre prévu et déjà dépensé. */
+  works: number;
+  total: number;
+  notarial: number;
+  /** Coût total − budget notarié : > 0 dépassement à financer en plus (partagé 70/30). */
+  gap: number;
+  gapPatrick: number;
+  gapCharlotte: number;
+};
+
+/** Coût total réel projeté du projet, comparé au budget de la déclaration notariée. */
+export function projectCost(rows: Pick<BudgetRow, "budget" | "spent">[], purchase: number, notarial: number, sharePatrick: number): ProjectCost {
+  const works = rows.reduce((acc, r) => acc + Math.max(r.budget, r.spent), 0);
+  const total = purchase + works;
+  const gap = total - notarial;
+  const gapPatrick = Math.round(gap * sharePatrick);
+  return { purchase, works, total, notarial, gap, gapPatrick, gapCharlotte: gap - gapPatrick };
+}

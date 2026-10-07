@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { formatPercent, summarizeBudget, type BudgetStatus } from "@/lib/budget";
+import { formatPercent, type BudgetStatus, type ProjectCost } from "@/lib/budget";
+import { loadBudget } from "@/lib/budget-data";
 import { prisma } from "@/lib/prisma";
 import { decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
@@ -17,9 +18,8 @@ const BAR_COLOR: Record<BudgetStatus, string> = {
 
 export default async function BudgetPage() {
   await connection();
-  const [lines, spent, unassigned] = await Promise.all([
-    prisma.budgetLine.findMany({ orderBy: { position: "asc" } }),
-    prisma.expense.groupBy({ by: ["budgetLineId"], _sum: { amount: true } }),
+  const [{ lines, rows, total, outOfBudget, cost }, unassigned] = await Promise.all([
+    loadBudget(),
     prisma.expense.findMany({
       where: { budgetLineId: null },
       include: { category: true },
@@ -27,19 +27,15 @@ export default async function BudgetPage() {
     }),
   ]);
 
-  const spentByLine = new Map(spent.map((s) => [s.budgetLineId ?? "", decimalToCents(s._sum.amount)]));
-  const { rows, total } = summarizeBudget(
-    lines.map((l) => ({ id: l.id, name: l.name, budget: decimalToCents(l.amount) })),
-    spentByLine,
-  );
-  const outOfBudget = spentByLine.get("") ?? 0;
-
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <Nav current="/budget" />
       <h1 className="mb-1 text-xl font-semibold">Budget travaux</h1>
       <p className="mb-5 text-sm text-stone-500">Scénario Hybride (cave technique) · dépensé vs prévu par poste</p>
 
+      <TotalCost cost={cost} />
+
+      <h2 className="mb-3 font-semibold">Travaux par poste</h2>
       <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Budget prévu" value={formatCents(total.budget)} />
         <Stat label="Dépensé" value={formatCents(total.spent)} />
@@ -116,6 +112,42 @@ export default async function BudgetPage() {
         )}
       </section>
     </main>
+  );
+}
+
+// Coût total réel projeté vs budget de la déclaration notariée (qui sert au partage avec Charlotte).
+function TotalCost({ cost }: { cost: ProjectCost }) {
+  const over = cost.gap > 0;
+  return (
+    <section className="mb-8 rounded-lg border border-stone-900 bg-white p-4">
+      <h2 className="mb-3 font-semibold">🏠 Coût total du projet</h2>
+      <dl className="space-y-1 text-sm">
+        <CostRow label="Achat & frais (réel, hors travaux)" cents={cost.purchase} />
+        <CostRow label="+ Travaux (prévu, ou dépensé si dépassé)" cents={cost.works} />
+        <CostRow label="= Coût total projeté" cents={cost.total} className="border-t border-stone-200 pt-1 text-base font-semibold" />
+        <CostRow label="Budget de la déclaration notariée" cents={cost.notarial} className="text-stone-500" />
+      </dl>
+      <div className={`mt-3 rounded-lg p-3 text-sm ${over ? "bg-red-50 text-red-800" : "bg-green-50 text-green-800"}`}>
+        <p className="flex justify-between gap-2 font-semibold">
+          <span>{over ? "Dépassement vs notarié" : "Marge vs notarié"}</span>
+          <span className="tabular-nums">{formatCents(Math.abs(cost.gap))}</span>
+        </p>
+        {over && (
+          <p className="mt-1">
+            À financer en plus, à 70/30 : Patrick {formatCents(cost.gapPatrick)} · Charlotte {formatCents(cost.gapCharlotte)}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function CostRow({ label, cents, className = "" }: { label: string; cents: number; className?: string }) {
+  return (
+    <div className={`flex justify-between gap-2 ${className}`}>
+      <dt>{label}</dt>
+      <dd className="tabular-nums">{formatCents(cents)}</dd>
+    </div>
   );
 }
 

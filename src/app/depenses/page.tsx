@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { loadBudget } from "@/lib/budget-data";
 import { computeCommitments, type PersonStatus } from "@/lib/commitments";
 import { PAYER_LABELS, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
@@ -26,11 +27,12 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
   const where: Prisma.ExpenseWhereInput = poste ? { budgetLineId: poste } : {};
   const order: Order = params.ordre === "asc" ? "asc" : params.ordre === "desc" ? "desc" : sort === "date" ? "desc" : "asc";
 
-  const [expenses, totals, budgetLine] = await Promise.all([
+  const [expenses, totals, budgetLine, { cost }] = await Promise.all([
     prisma.expense.findMany({ where, include: { category: true, budgetLine: true }, orderBy: ORDER_BY[sort](order) }),
     // Engagements 70/30 : toujours sur l'ensemble des dépenses partagées, même si la liste est filtrée.
     prisma.expense.aggregate({ where: { kind: "SHARED" }, _sum: { paidPatrick: true, paidCharlotte: true } }),
     poste ? prisma.budgetLine.findUnique({ where: { id: poste } }) : null,
+    loadBudget(),
   ]);
 
   // Totaux du pied de tableau : calculés sur les lignes affichées (suit le filtre par poste).
@@ -95,6 +97,10 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
               <Line label="Reste au budget" cents={status.budget - status.spent} />
             )}
           </dl>
+          <Link href="/budget" className={`mt-2 block border-t border-stone-200 pt-2 text-sm ${cost.gap > 0 ? "text-red-700" : "text-stone-600"}`}>
+            Coût total réel projeté : <strong className="tabular-nums">{formatCents(cost.total)}</strong>
+            {cost.gap > 0 && <> (+{formatCents(cost.gap)})</>} →
+          </Link>
         </div>
         <Person name="Patrick" share="70 %" s={status.patrick} />
         <Person name="Charlotte" share="30 %" s={status.charlotte} />
