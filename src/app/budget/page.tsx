@@ -4,7 +4,8 @@ import { formatPercent, summarizeBudget, type BudgetStatus } from "@/lib/budget"
 import { prisma } from "@/lib/prisma";
 import { decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
-import { assignExpense, updateBudgetAmount } from "./actions";
+import { assignExpense } from "./actions";
+import { BudgetAmountForm } from "./budget-amount-form";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC" });
 
@@ -71,17 +72,7 @@ export default async function BudgetPage() {
             </div>
             <details className="mt-1 text-sm">
               <summary className="cursor-pointer text-stone-500">Modifier le budget</summary>
-              <form action={updateBudgetAmount} className="mt-2 flex gap-2">
-                <input type="hidden" name="id" value={r.id} />
-                <input
-                  name="amount"
-                  inputMode="decimal"
-                  defaultValue={(r.budget / 100).toFixed(2).replace(".", ",")}
-                  aria-label={`Budget ${r.name} (€)`}
-                  className="field"
-                />
-                <button type="submit" className="btn-primary py-2">OK</button>
-              </form>
+              <BudgetAmountForm id={r.id} name={r.name} budgetCents={r.budget} />
             </details>
           </li>
         ))}
