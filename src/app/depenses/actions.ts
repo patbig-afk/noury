@@ -33,6 +33,7 @@ const schema = z
     date: z.iso.date({ error: "Date requise" }),
     categoryId: z.string().min(1, "Catégorie requise"),
     newCategory: optionalText,
+    budgetLineId: optionalText,
     description: z.string().trim().min(1, "Description requise").max(500),
     supplier: z.string().trim().min(1, "Fournisseur requis").max(200),
     amount: z
@@ -74,6 +75,7 @@ async function resolveCategory(d: ParsedExpense) {
 const baseInput = async (d: ParsedExpense) => ({
   date: d.date,
   categoryId: await resolveCategory(d),
+  budgetLineId: d.budgetLineId,
   description: d.description,
   supplier: d.supplier,
   amountCents: d.amount,

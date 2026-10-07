@@ -17,6 +17,7 @@ Remplace le Google Sheet `Suivi_Depenses_Maison_Noury`.
 | `src/lib/sheet-import.ts` + `src/app/import/` | Import de l'historique depuis l'export CSV du Google Sheet (sans doublons) |
 | `src/app/page.tsx` | Page « Nouvelle dépense » |
 | `src/app/depenses/page.tsx` | Liste des dépenses : tri date/catégorie, totaux, téléchargements |
+| `src/app/budget/` + `src/lib/budget.ts` | Page « Budget » : dépensé vs prévu par poste (scénario Hybride), modification des montants, affectation des dépenses |
 | `src/app/depenses/` | Formulaire + enregistrement (Server Action) |
 | `src/app/api/upload` | Délivre un jeton d'upload : les fichiers vont direct du téléphone au Blob |
 | `src/app/api/files/[id]/[kind]` | Téléchargement protégé d'une facture / d'un justificatif |

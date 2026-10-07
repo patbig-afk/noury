@@ -4,6 +4,7 @@ import { centsToDecimalString as money, computeSplit, type ExpenseKind, type Pay
 export type ExpenseInput = {
   date: string; // AAAA-MM-JJ
   categoryId: string;
+  budgetLineId?: string | null;
   description: string;
   supplier: string;
   amountCents: number;

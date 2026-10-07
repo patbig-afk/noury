@@ -9,9 +9,10 @@ import { Nav } from "../../../nav";
 export default async function EditExpensePage({ params }: PageProps<"/depenses/[id]/modifier">) {
   await connection();
   const { id } = await params;
-  const [expense, categories] = await Promise.all([
+  const [expense, categories, budgetLines] = await Promise.all([
     prisma.expense.findUnique({ where: { id } }),
     prisma.category.findMany({ select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
+    prisma.budgetLine.findMany({ select: { id: true, name: true }, orderBy: { position: "asc" } }),
   ]);
   if (!expense) notFound();
 
@@ -23,12 +24,14 @@ export default async function EditExpensePage({ params }: PageProps<"/depenses/[
       <h1 className="mb-5 text-xl font-semibold">Modifier la dépense</h1>
       <ExpenseForm
         categories={categories}
+        budgetLines={budgetLines}
         today={today}
         filesEnabled={isBlobConfigured()}
         expense={{
           id: expense.id,
           date: expense.date.toISOString().slice(0, 10),
           categoryId: expense.categoryId,
+          budgetLineId: expense.budgetLineId,
           description: expense.description,
           supplier: expense.supplier,
           amountCents: decimalToCents(expense.amount),

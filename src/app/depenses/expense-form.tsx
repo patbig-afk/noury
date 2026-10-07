@@ -8,13 +8,14 @@ import { KIND_LABELS, PAYER_LABELS, balanceLabel, computeSplit, formatCents, par
 import { createExpense, updateExpense, type ExpenseFormState } from "./actions";
 import { NEW_CATEGORY } from "./constants";
 
-type Category = { id: string; name: string };
+type Option = { id: string; name: string };
 
 /** Dépense existante à modifier (montant en centimes, date AAAA-MM-JJ). */
 export type EditedExpense = {
   id: string;
   date: string;
   categoryId: string;
+  budgetLineId: string | null;
   description: string;
   supplier: string;
   amountCents: number;
@@ -51,11 +52,13 @@ async function submit(prev: ExpenseFormState, formData: FormData): Promise<Expen
 
 export function ExpenseForm({
   categories,
+  budgetLines,
   today,
   filesEnabled,
   expense,
 }: {
-  categories: Category[];
+  categories: Option[];
+  budgetLines: Option[];
   today: string;
   filesEnabled: boolean;
   expense?: EditedExpense;
@@ -83,6 +86,7 @@ export function ExpenseForm({
       <Fields
         key={state.savedCount}
         categories={categories}
+        budgetLines={budgetLines}
         today={today}
         filesEnabled={filesEnabled}
         errors={state.fieldErrors ?? {}}
@@ -109,12 +113,14 @@ export function ExpenseForm({
 
 function Fields({
   categories,
+  budgetLines,
   today,
   filesEnabled,
   errors,
   expense,
 }: {
-  categories: Category[];
+  categories: Option[];
+  budgetLines: Option[];
   today: string;
   filesEnabled: boolean;
   errors: Partial<Record<string, string>>;
@@ -150,6 +156,17 @@ function Fields({
           <input name="newCategory" required autoFocus className="field" placeholder="ex : Assurance" />
         </Field>
       )}
+
+      <Field label="Poste du budget travaux" error={errors.budgetLineId}>
+        <select name="budgetLineId" defaultValue={expense?.budgetLineId ?? ""} className="field">
+          <option value="">— Hors budget travaux (notaire, achat…)</option>
+          {budgetLines.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="Description" error={errors.description}>
         <input name="description" defaultValue={expense?.description} required className="field" placeholder="ex : Acompte plomberie" />

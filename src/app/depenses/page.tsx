@@ -22,20 +22,28 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
   await connection();
   const params = await searchParams;
   const sort: SortKey = params.tri === "categorie" ? "categorie" : "date";
+  const poste = typeof params.poste === "string" ? params.poste : undefined;
+  const where: Prisma.ExpenseWhereInput = poste ? { budgetLineId: poste } : {};
   const order: Order = params.ordre === "asc" ? "asc" : params.ordre === "desc" ? "desc" : sort === "date" ? "desc" : "asc";
 
-  const [expenses, totals, current] = await Promise.all([
-    prisma.expense.findMany({ include: { category: true }, orderBy: ORDER_BY[sort](order) }),
-    prisma.expense.aggregate({ where: { kind: "SHARED" }, _sum: { amount: true, sharePatrick: true, shareCharlotte: true, owedByCharlotte: true, paidPatrick: true, paidCharlotte: true } }),
-    prisma.expense.aggregate({ where: { kind: "CURRENT" }, _sum: { amount: true } }),
+  const [expenses, totals, budgetLine] = await Promise.all([
+    prisma.expense.findMany({ where, include: { category: true, budgetLine: true }, orderBy: ORDER_BY[sort](order) }),
+    // Engagements 70/30 : toujours sur l'ensemble des dépenses partagées, même si la liste est filtrée.
+    prisma.expense.aggregate({ where: { kind: "SHARED" }, _sum: { paidPatrick: true, paidCharlotte: true } }),
+    poste ? prisma.budgetLine.findUnique({ where: { id: poste } }) : null,
   ]);
 
+  // Totaux du pied de tableau : calculés sur les lignes affichées (suit le filtre par poste).
+  const shared = expenses.filter((e) => e.kind === "SHARED");
+  const total = (list: typeof expenses, key: "amount" | "sharePatrick" | "shareCharlotte" | "owedByCharlotte") =>
+    list.reduce((acc, e) => acc + decimalToCents(e[key]), 0);
   const sum = {
-    amount: decimalToCents(totals._sum.amount),
-    sharePatrick: decimalToCents(totals._sum.sharePatrick),
-    shareCharlotte: decimalToCents(totals._sum.shareCharlotte),
-    owedByCharlotte: decimalToCents(totals._sum.owedByCharlotte),
+    amount: total(shared, "amount"),
+    sharePatrick: total(shared, "sharePatrick"),
+    shareCharlotte: total(shared, "shareCharlotte"),
+    owedByCharlotte: total(shared, "owedByCharlotte"),
   };
+  const currentAmount = total(expenses.filter((e) => e.kind === "CURRENT"), "amount");
   // Sans justificatif de paiement, la dépense est considérée comme restant à payer.
   const toPay = (e: { proofName: string | null; proof2Name: string | null }) => !e.proofName && !e.proof2Name;
   const toPayCount = expenses.filter(toPay).length;
@@ -44,7 +52,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
   // Lien d'en-tête de colonne : re-cliquer sur la colonne active inverse l'ordre.
   const sortHref = (key: SortKey) => {
     const nextOrder = key === sort ? (order === "asc" ? "desc" : "asc") : key === "date" ? "desc" : "asc";
-    return `/depenses?tri=${key}&ordre=${nextOrder}`;
+    return `/depenses?tri=${key}&ordre=${nextOrder}${poste ? `&poste=${poste}` : ""}`;
   };
   const arrow = (key: SortKey) => (key === sort ? (order === "asc" ? " ↑" : " ↓") : "");
 
@@ -64,6 +72,15 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
           Importer depuis le Google Sheet
         </Link>
       </div>
+
+      {budgetLine && (
+        <p className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-stone-200 px-3 py-2 text-sm">
+          <span>
+            Poste : <strong>{budgetLine.name}</strong>
+          </span>
+          <Link href="/depenses" className="underline">Tout afficher</Link>
+        </p>
+      )}
 
       {/* Suivi des engagements 70/30 : visible d'un coup d'œil sur téléphone */}
       <section className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -98,6 +115,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <th className="px-2.5 py-2">
                   <Link href={sortHref("categorie")} className="hover:underline">Catégorie{arrow("categorie")}</Link>
                 </th>
+                <th className="px-2.5 py-2">Poste</th>
                 <th className="px-2.5 py-2">Description</th>
                 <th className="px-2.5 py-2">Fournisseur</th>
                 <th className="px-2.5 py-2 text-right">Montant</th>
@@ -123,6 +141,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                       </span>
                     )}
                   </td>
+                  <td className="px-2.5 py-2 text-stone-600">{e.budgetLine?.name ?? "—"}</td>
                   <td className="max-w-56 truncate px-2.5 py-2" title={e.description}>
                     {toPay(e) && (
                       <span className="mr-1.5 rounded bg-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-900" title="Aucun justificatif de paiement">
@@ -172,7 +191,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
             </tbody>
             <tfoot className="border-t-2 border-stone-300 bg-stone-100 font-semibold">
               <tr>
-                <td className="px-2.5 py-2" colSpan={4}>Total partagé (achat / travaux)</td>
+                <td className="px-2.5 py-2" colSpan={5}>Total partagé (achat / travaux)</td>
                 <Money cents={sum.amount} />
                 <td />
                 <Money cents={sum.sharePatrick} />
@@ -180,10 +199,10 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <Money cents={sum.owedByCharlotte} signed />
                 <td colSpan={2} />
               </tr>
-              {decimalToCents(current._sum.amount) > 0 && (
+              {currentAmount > 0 && (
                 <tr className="font-normal text-stone-600">
-                  <td className="px-2.5 py-2" colSpan={4}>Dépenses courantes (non partagées)</td>
-                  <Money cents={decimalToCents(current._sum.amount)} />
+                  <td className="px-2.5 py-2" colSpan={5}>Dépenses courantes (non partagées)</td>
+                  <Money cents={currentAmount} />
                   <td colSpan={6} />
                 </tr>
               )}

@@ -3,6 +3,7 @@ import Link from "next/link";
 const TABS = [
   { href: "/", label: "➕ Saisir" },
   { href: "/depenses", label: "📋 Dépenses" },
+  { href: "/budget", label: "📊 Budget" },
   { href: "/vente", label: "🏷️ Vente" },
 ] as const;
 

@@ -30,11 +30,25 @@ model Category {
   expenses  Expense[]
 }
 
+// Poste du budget travaux (scénario Hybride du Google Sheet "Maison LE GRAND - Pilotage Projet").
+model BudgetLine {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  position  Int
+  amount    Decimal   @db.Decimal(12, 2)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expenses  Expense[]
+}
+
 model Expense {
   id          String      @id @default(cuid())
   date        DateTime    @db.Date
   categoryId  String
   category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  // Poste du budget travaux auquel la dépense s'impute (vide : hors budget travaux, ex. notaire)
+  budgetLineId String?
+  budgetLine   BudgetLine? @relation(fields: [budgetLineId], references: [id], onDelete: SetNull)
   description String
   supplier    String
   amount      Decimal     @db.Decimal(12, 2)
@@ -62,4 +76,5 @@ model Expense {
 
   @@index([date])
   @@index([categoryId])
+  @@index([budgetLineId])
 }
