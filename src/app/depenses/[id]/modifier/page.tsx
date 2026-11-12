@@ -39,6 +39,7 @@ export default async function EditExpensePage({ params }: PageProps<"/depenses/[
           kind: expense.kind,
           invoiceName: expense.invoiceName,
           proofName: expense.proofName,
+          statementName: expense.statementName,
         }}
       />
     </main>

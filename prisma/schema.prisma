@@ -71,6 +71,8 @@ model Expense {
   proofName   String?
   proof2Path  String?
   proof2Name  String?
+  statementPath String? // relevé bancaire
+  statementName String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -23,27 +23,31 @@ export type EditedExpense = {
   kind: ExpenseKind;
   invoiceName: string | null;
   proofName: string | null;
+  statementName: string | null;
 };
 
 // Envoie un fichier directement du navigateur vers le store Blob privé.
-async function uploadFile(formData: FormData, field: "invoice" | "proof") {
-  const file = formData.get(field);
-  formData.delete(field);
-  if (!(file instanceof File) || file.size === 0) return;
-
+export async function uploadToBlob(file: File) {
   const safeName = file.name.normalize("NFD").replace(/[^\w.-]+/g, "_");
   const blob = await uploadPresigned(`${BLOB_FOLDER}/${safeName}`, file, {
     access: "private",
     handleUploadUrl: "/api/upload",
     multipart: file.size > 5 * 1024 * 1024,
   });
-  formData.set(`${field}Path`, blob.pathname);
+  return blob.pathname;
+}
+
+async function uploadFile(formData: FormData, field: "invoice" | "proof" | "statement") {
+  const file = formData.get(field);
+  formData.delete(field);
+  if (!(file instanceof File) || file.size === 0) return;
+  formData.set(`${field}Path`, await uploadToBlob(file));
   formData.set(`${field}Name`, file.name);
 }
 
 async function submit(prev: ExpenseFormState, formData: FormData): Promise<ExpenseFormState> {
   try {
-    await Promise.all([uploadFile(formData, "invoice"), uploadFile(formData, "proof")]);
+    await Promise.all([uploadFile(formData, "invoice"), uploadFile(formData, "proof"), uploadFile(formData, "statement")]);
   } catch (error) {
     return { ...prev, fieldErrors: {}, error: `Échec de l'envoi du fichier : ${(error as Error).message}` };
   }
@@ -258,6 +262,10 @@ function Fields({
 
       <Field label="Justificatif de paiement (PDF ou capture)" hint={currentFile(expense?.proofName)}>
         <input name="proof" type="file" accept={FILE_ACCEPT} disabled={!filesEnabled} className="file-field" />
+      </Field>
+
+      <Field label="Relevé bancaire (PDF ou capture)" hint={currentFile(expense?.statementName)}>
+        <input name="statement" type="file" accept={FILE_ACCEPT} disabled={!filesEnabled} className="file-field" />
       </Field>
     </>
   );

@@ -3,11 +3,13 @@ import { connection } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { loadBudget } from "@/lib/budget-data";
+import { isBlobConfigured } from "@/lib/files";
 import { computeCommitments, type PersonStatus } from "@/lib/commitments";
 import { PAYER_LABELS, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
 import { DeleteButton } from "./delete-button";
 import { FileViewer } from "./file-viewer";
+import { StatementCell } from "./statement-cell";
 
 type SortKey = "date" | "categorie";
 type Order = "asc" | "desc";
@@ -56,6 +58,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
     const nextOrder = key === sort ? (order === "asc" ? "desc" : "asc") : key === "date" ? "desc" : "asc";
     return `/depenses?tri=${key}&ordre=${nextOrder}${poste ? `&poste=${poste}` : ""}`;
   };
+  const filesEnabled = isBlobConfigured();
   const arrow = (key: SortKey) => (key === sort ? (order === "asc" ? " ↑" : " ↓") : "");
 
   return (
@@ -132,6 +135,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                   Charlotte doit
                 </th>
                 <th className="px-2.5 py-2">Fichiers</th>
+                <th className="px-2.5 py-2">Relevé</th>
                 <th className="px-2.5 py-2"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
@@ -181,6 +185,15 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                       ]}
                     />
                   </td>
+                  <td className="px-2.5 py-2 text-base">
+                    <StatementCell
+                      id={e.id}
+                      caption={`${dateFormat.format(e.date)} · ${e.description} — ${e.supplier}`}
+                      name={e.statementName}
+                      external={!!e.statementPath?.startsWith("https://")}
+                      filesEnabled={filesEnabled}
+                    />
+                  </td>
                   <td className="px-1 py-2 text-right">
                     <Link
                       href={`/depenses/${e.id}/modifier`}
@@ -203,13 +216,13 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
                 <Money cents={sum.sharePatrick} />
                 <Money cents={sum.shareCharlotte} />
                 <Money cents={sum.owedByCharlotte} signed />
-                <td colSpan={2} />
+                <td colSpan={3} />
               </tr>
               {currentAmount > 0 && (
                 <tr className="font-normal text-stone-600">
                   <td className="px-2.5 py-2" colSpan={5}>Dépenses courantes (non partagées)</td>
                   <Money cents={currentAmount} />
-                  <td colSpan={6} />
+                  <td colSpan={7} />
                 </tr>
               )}
             </tfoot>

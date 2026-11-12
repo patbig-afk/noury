@@ -16,6 +16,8 @@ export type ExpenseInput = {
   proofName?: string | null;
   proof2Path?: string | null;
   proof2Name?: string | null;
+  statementPath?: string | null;
+  statementName?: string | null;
 };
 
 /** Prépare une ligne de dépense avec sa répartition calculée (70/30, ou à la charge du payeur si courante). */

@@ -6,6 +6,7 @@ const FIELDS = {
   facture: { path: "invoicePath", name: "invoiceName" },
   justificatif: { path: "proofPath", name: "proofName" },
   "justificatif-2": { path: "proof2Path", name: "proof2Name" },
+  releve: { path: "statementPath", name: "statementName" },
 } as const;
 
 // Types affichables dans la visionneuse (pas de SVG : il pourrait exécuter du script).

@@ -46,6 +46,8 @@ const schema = z
     invoiceName: optionalText,
     proofPath: blobPath,
     proofName: optionalText,
+    statementPath: blobPath,
+    statementName: optionalText,
   })
   .refine((d) => d.categoryId !== NEW_CATEGORY || d.newCategory, {
     path: ["newCategory"],
@@ -97,6 +99,8 @@ export async function createExpense(prev: ExpenseFormState, formData: FormData):
       invoiceName: d.invoiceName,
       proofPath: d.proofPath,
       proofName: d.proofName,
+      statementPath: d.statementPath,
+      statementName: d.statementName,
     }),
   });
 
@@ -118,6 +122,7 @@ export async function updateExpense(prev: ExpenseFormState, formData: FormData):
   const files = {
     ...(d.invoicePath && { invoicePath: d.invoicePath, invoiceName: d.invoiceName }),
     ...(d.proofPath && { proofPath: d.proofPath, proofName: d.proofName }),
+    ...(d.statementPath && { statementPath: d.statementPath, statementName: d.statementName }),
   };
   const data = expenseData({
     ...(await baseInput(d)),
@@ -125,11 +130,13 @@ export async function updateExpense(prev: ExpenseFormState, formData: FormData):
     invoiceName: existing.invoiceName,
     proofPath: existing.proofPath,
     proofName: existing.proofName,
+    statementPath: existing.statementPath,
+    statementName: existing.statementName,
     ...files,
   });
   await prisma.expense.update({ where: { id }, data });
 
-  const replaced = [d.invoicePath && existing.invoicePath, d.proofPath && existing.proofPath].filter(isBlobPath);
+  const replaced = [d.invoicePath && existing.invoicePath, d.proofPath && existing.proofPath, d.statementPath && existing.statementPath].filter(isBlobPath);
   if (replaced.length) await del(replaced).catch((error) => console.error("Anciens fichiers Blob non supprimés", replaced, error));
 
   revalidatePath("/", "layout");
@@ -141,8 +148,23 @@ export async function deleteExpense(id: string): Promise<{ error?: string }> {
   const expense = await prisma.expense.delete({ where: { id } }).catch(() => null);
   if (!expense) return { error: "Dépense introuvable (déjà supprimée ?)" };
 
-  const paths = [expense.invoicePath, expense.proofPath, expense.proof2Path].filter(isBlobPath);
+  const paths = [expense.invoicePath, expense.proofPath, expense.proof2Path, expense.statementPath].filter(isBlobPath);
   if (paths.length) await del(paths).catch((error) => console.error("Fichiers Blob non supprimés", paths, error));
+
+  revalidatePath("/", "layout");
+  return {};
+}
+
+// Joint un relevé bancaire à une dépense depuis la liste (le fichier est déjà dans le store Blob).
+export async function attachStatement(id: string, path: string, name: string): Promise<{ error?: string }> {
+  if (!isBlobPath(path)) return { error: "Fichier invalide" };
+  const existing = await prisma.expense.findUnique({ where: { id }, select: { statementPath: true } });
+  if (!existing) return { error: "Dépense introuvable (supprimée entre-temps ?)" };
+
+  await prisma.expense.update({ where: { id }, data: { statementPath: path, statementName: name.slice(0, 300) } });
+  if (isBlobPath(existing.statementPath)) {
+    await del(existing.statementPath).catch((error) => console.error("Ancien relevé Blob non supprimé", existing.statementPath, error));
+  }
 
   revalidatePath("/", "layout");
   return {};
