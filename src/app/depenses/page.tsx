@@ -4,8 +4,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { loadBudget } from "@/lib/budget-data";
 import { isBlobConfigured } from "@/lib/files";
-import { computeCommitments, type PersonStatus } from "@/lib/commitments";
-import { PAYER_LABELS, decimalToCents, formatCents } from "@/lib/split";
+import { FONDS_BANGKOK_CENTS, computeCommitments, type PersonStatus } from "@/lib/commitments";
+import { PAYER_LABELS, SHARE_PATRICK, decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
 import { DeleteButton } from "./delete-button";
 import { FileViewer } from "./file-viewer";
@@ -105,7 +105,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/depense
             {cost.gap > 0 && <> (+{formatCents(cost.gap)})</>} →
           </Link>
         </div>
-        <Person name="Patrick" share="70 %" s={status.patrick} />
+        <Person name="Patrick" share="70 %" s={status.patrick} bangkok={{ projected: Math.round(cost.total * SHARE_PATRICK) }} />
         <Person name="Charlotte" share="30 %" s={status.charlotte} />
       </section>
 
@@ -253,7 +253,7 @@ function Line({ label, cents, className = "" }: { label: string; cents: number; 
 }
 
 // Situation d'un indivisaire face à son engagement : reste à verser, ou avance à récupérer.
-function Person({ name, share, s }: { name: string; share: string; s: PersonStatus }) {
+function Person({ name, share, s, bangkok }: { name: string; share: string; s: PersonStatus; bangkok?: { projected: number } }) {
   const ahead = s.balance > 0;
   return (
     <div className={`rounded-lg border p-3 ${ahead ? "border-green-700 bg-green-50" : "border-stone-200 bg-white"}`}>
@@ -272,6 +272,27 @@ function Person({ name, share, s }: { name: string; share: string; s: PersonStat
           <Line label="Engagement tenu" cents={0} className="font-medium" />
         )}
       </dl>
+      {bangkok && (
+        <div className="mt-2 border-t border-stone-200 pt-2 text-sm">
+          <p className="text-xs text-stone-500">Fonds Bangkok : {formatCents(FONDS_BANGKOK_CENTS)}</p>
+          <BangkokLine label="Projeté (70 %)" value={bangkok.projected} />
+          <BangkokLine label="Réel (payé)" value={s.paid} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function BangkokLine({ label, value }: { label: string; value: number }) {
+  const gap = value - FONDS_BANGKOK_CENTS;
+  return (
+    <p className="flex justify-between gap-2">
+      <span>
+        {label} <span className="tabular-nums">{formatCents(value)}</span>
+      </span>
+      <span className={`font-medium tabular-nums ${gap > 0 ? "text-red-700" : "text-green-700"}`}>
+        {gap > 0 ? `+${formatCents(gap)}` : `−${formatCents(-gap)}`}
+      </span>
+    </p>
   );
 }

@@ -5,6 +5,8 @@
 import { SHARE_PATRICK } from "./split";
 
 export const BUDGET_CENTS = 682_730_00;
+/** Fonds de départ de Patrick : vente de l'appartement de Bangkok. */
+export const FONDS_BANGKOK_CENTS = 395_000_00;
 export const COMMITMENT_CENTS = { patrick: 477_911_00, charlotte: 204_819_00 } as const;
 
 export type PersonStatus = {
