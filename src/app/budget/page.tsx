@@ -7,6 +7,7 @@ import { decimalToCents, formatCents } from "@/lib/split";
 import { Nav } from "../nav";
 import { assignExpense } from "./actions";
 import { BudgetAmountForm } from "./budget-amount-form";
+import { ExportButton } from "./export-button";
 
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC" });
 
@@ -33,6 +34,8 @@ export default async function BudgetPage() {
       <Nav current="/budget" />
       <h1 className="mb-1 text-xl font-semibold">Budget travaux</h1>
       <p className="mb-5 text-sm text-stone-500">Scénario Hybride (cave technique) · dépensé vs prévu par poste</p>
+
+      <ExportButton />
 
       <TotalCost cost={cost} />
 
